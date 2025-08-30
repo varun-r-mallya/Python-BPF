@@ -3,6 +3,3 @@ def tracepoint(name: str):
         fn._section = f"tracepoint/{name}"
         return fn
     return wrapper
-
-def license(license_type: str):
-    return license_type

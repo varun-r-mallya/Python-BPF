@@ -1,28 +1,20 @@
 import ast
 from llvmlite import ir
+from .license_pass import license_processing
 
-def parser(source_code, filename):
+def processor(source_code, filename, module):
     tree = ast.parse(source_code, filename)
-
-    for node in tree.body:
-        if isinstance(node, ast.FunctionDef):
-            print("Function:", node.name)
-            for dec in node.decorator_list:
-                print("  Decorator AST:", ast.dump(dec))
+    license_processing(tree, module)
 
 def compile_to_ir(filename: str, output: str):
     with open(filename) as f:
-        parser(f.read(), filename)
+        source = f.read()
+
     module = ir.Module(name=filename)
     module.data_layout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
     module.triple = "bpf"
 
-    func_ty = ir.FunctionType(ir.IntType(64), [], False)
-    func = ir.Function(module, func_ty, name="trace_execve")
-
-    block = func.append_basic_block(name="entry")
-    builder = ir.IRBuilder(block)
-    builder.ret(ir.IntType(64)(0))
+    processor(source, filename, module)
 
     with open(output, "w") as f:
         f.write(str(module))
