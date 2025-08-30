@@ -1,10 +1,16 @@
 import ast
 from llvmlite import ir
 from .license_pass import license_processing
+from .functions_pass import functions_processing
 
 def processor(source_code, filename, module):
     tree = ast.parse(source_code, filename)
-    license_processing(tree, module)
+    print(ast.dump(tree))
+    section_names = []
+    section_names.append(license_processing(tree, module))
+    section_names.append(functions_processing(tree, module))
+    if any(name is None for name in section_names):
+        print("Processing failed")
 
 def compile_to_ir(filename: str, output: str):
     with open(filename) as f:
