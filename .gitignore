@@ -1,0 +1,8 @@
+*venv*/
+.ropeproject/
+.idea/
+*.egg-info/
+.vscode/
+__pycache__/
+*.ll
+*.o
