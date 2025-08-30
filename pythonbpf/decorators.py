@@ -4,11 +4,8 @@ def tracepoint(name: str):
         return fn
     return wrapper
 
-def license(name: str):
-    def wrapper(fn):
-        fn._license = name
-        return fn
-    return wrapper
+def license(license_type: str):
+    return license_type
 
 def trace_printk(msg: str):
     # placeholder — real version lowers to IR later

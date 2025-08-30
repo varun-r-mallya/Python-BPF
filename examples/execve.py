@@ -1,10 +1,8 @@
-from pythonbpf import decorators 
+from pythonbpf.decorators import tracepoint, license
 
-@decorators.tracepoint("syscalls:sys_enter_execve")
+@tracepoint("syscalls:sys_enter_execve")
 def trace_execve(ctx) -> int:
-    decorators.trace_printk("execve called\n")
+    print("execve called\n")
     return 0
 
-@decorators.license("GPL")
-def _():
-    pass
+license("GPL")

@@ -1,9 +1,9 @@
-install: 
-	pip install -e .
-
 compile:
 	chmod +x ./tools/compile.py
 	./tools/compile.py ./examples/execve.py
+
+install: 
+	pip install -e .
 
 clean:
 	rm -rf build dist *.egg-info
