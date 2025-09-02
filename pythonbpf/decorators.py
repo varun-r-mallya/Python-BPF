@@ -3,6 +3,7 @@ from types import SimpleNamespace
 syscalls = SimpleNamespace(
     sys_enter_execve="syscalls:sys_enter_execve",
     sys_exit_execve="syscalls:sys_exit_execve",
+    sys_clone="syscalls:sys_clone",
 )
 
 
