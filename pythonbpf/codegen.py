@@ -2,15 +2,16 @@ import ast
 from llvmlite import ir
 from .license_pass import license_processing
 from .functions_pass import functions_processing
+from .constants_pass import constants_processing
+from .globals_pass import globals_processing
 
 def processor(source_code, filename, module):
     tree = ast.parse(source_code, filename)
     print(ast.dump(tree))
-    section_names = []
-    section_names.append(license_processing(tree, module))
-    section_names.append(functions_processing(tree, module))
-    if any(name is None for name in section_names):
-        print("Processing failed")
+    constants_processing(tree, module)
+    license_processing(tree, module)
+    globals_processing(tree, module)
+    functions_processing(tree, module)
 
 def compile_to_ir(filename: str, output: str):
     with open(filename) as f:
@@ -21,6 +22,16 @@ def compile_to_ir(filename: str, output: str):
     module.triple = "bpf"
 
     processor(source, filename, module)
+    
+    wchar_size = module.add_metadata([ir.Constant(ir.IntType(32), 1),
+                                      "wchar_size",
+                                      ir.Constant(ir.IntType(32), 4)])
+    frame_pointer = module.add_metadata([ir.Constant(ir.IntType(32), 7),
+                                         "frame-pointer",
+                                         ir.Constant(ir.IntType(32), 2)])
+    module.add_named_metadata("llvm.module.flags", wchar_size)
+    module.add_named_metadata("llvm.module.flags", frame_pointer)
+    module.add_named_metadata("llvm.ident", ["llvmlite PythonBPF v0.0.0"])
 
     with open(output, "w") as f:
         f.write(str(module))
