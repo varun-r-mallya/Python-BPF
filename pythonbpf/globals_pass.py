@@ -33,9 +33,10 @@ def globals_processing(tree, module: ir.Module):
             if (
                 isinstance(dec, ast.Call)
                 and isinstance(dec.func, ast.Name)
+                and dec.func.id == "section"
                 and len(dec.args) == 1
-                and isinstance(dec.args[0], ast.Attribute)
-                and isinstance(dec.args[0].value, ast.Name)
+                and isinstance(dec.args[0], ast.Constant)
+                and isinstance(dec.args[0].value, str)
             ):
                 collected.append(node.name)
 
