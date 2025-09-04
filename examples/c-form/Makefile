@@ -10,7 +10,7 @@ OBJECT := example.bpf.o
 all: $(OUT)
 	
 object: $(SRC)
-	$(BPF_CLANG) $(CFLAGS) $< -o $(OBJECT)
+	$(BPF_CLANG) -O2 -target bpf -c $< -o $(OBJECT)
 
 $(OUT): $(SRC) object
 	$(BPF_CLANG) $(CFLAGS) -S $< -o $@
