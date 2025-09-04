@@ -26,7 +26,9 @@ def constants_processing(tree, module):
             nonlocal current_function
             old_function = current_function
             current_function = node.name
-            self.generic_visit(node)
+            for child in ast.iter_child_nodes(node):
+                if not (hasattr(node, 'decorator_list') and child in node.decorator_list):
+                    self.visit(child)
             current_function = old_function
 
         def visit_Constant(self, node):
