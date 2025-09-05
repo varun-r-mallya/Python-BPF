@@ -1,12 +1,14 @@
 from llvmlite import ir
 import ast
 
+
 def emit_constants(module: ir.Module, constant_str: str, name: str):
     constant_bytes = constant_str.encode("utf8") + b"\x00"
     elems = [ir.Constant(ir.IntType(8), b) for b in constant_bytes]
     ty = ir.ArrayType(ir.IntType(8), len(elems))
 
     gvar = ir.GlobalVariable(module, ty, name=name)
+    print("constant emitted:", name)
 
     gvar.initializer = ir.Constant(ty, elems)  # type: ignore
 
@@ -15,6 +17,7 @@ def emit_constants(module: ir.Module, constant_str: str, name: str):
     gvar.global_constant = True
 
     return gvar
+
 
 def constants_processing(tree, module):
     """Process string constants in the given AST tree and emit them to rodata"""
@@ -37,7 +40,8 @@ def constants_processing(tree, module):
                 if constant_count == 0:
                     constant_name = f"{current_function}.____fmt"
                 else:
-                    constant_name = f"{current_function}.____fmt.{constant_count}"
+                    constant_name = f"""{current_function}.____fmt.{
+                        constant_count}"""
                 emit_constants(module, node.value, constant_name)
                 constant_count += 1
             self.generic_visit(node)

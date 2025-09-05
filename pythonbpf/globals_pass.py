@@ -1,6 +1,7 @@
 from llvmlite import ir
 import ast
 
+
 def emit_globals(module: ir.Module, names: list[str]):
     """
     Emit the @llvm.compiler.used global given a list of function/global names.
@@ -15,7 +16,9 @@ def emit_globals(module: ir.Module, names: list[str]):
             g = module.get_global(name)
         else:
             g = ir.GlobalValue(module, ptr_ty, name)
-
+        print("global emitted:", name)
+        print(isinstance(g, ir.GlobalVariable))
+        print(isinstance(g, ir.Function))
         elems.append(g.bitcast(ptr_ty))
 
     gv = ir.GlobalVariable(module, used_array_ty, "llvm.compiler.used")

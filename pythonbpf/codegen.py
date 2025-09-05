@@ -5,13 +5,15 @@ from .functions_pass import functions_processing
 from .constants_pass import constants_processing
 from .globals_pass import globals_processing
 
+
 def processor(source_code, filename, module):
     tree = ast.parse(source_code, filename)
-    print(ast.dump(tree))
+    print(ast.dump(tree, indent=4))
     constants_processing(tree, module)
     license_processing(tree, module)
     globals_processing(tree, module)
     functions_processing(tree, module)
+
 
 def compile_to_ir(filename: str, output: str):
     with open(filename) as f:
@@ -22,7 +24,6 @@ def compile_to_ir(filename: str, output: str):
     module.triple = "bpf"
 
     processor(source, filename, module)
-    
     wchar_size = module.add_metadata([ir.Constant(ir.IntType(32), 1),
                                       "wchar_size",
                                       ir.Constant(ir.IntType(32), 4)])
