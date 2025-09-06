@@ -43,6 +43,27 @@ def emit_function(module: ir.Module, name: str):
     return func
 
 
+def get_probe_string(func_node):
+    """Extract the probe string from the decorator of the function node."""
+    # TODO: right now we have the whole string in the section decorator
+    # But later we can implement typed tuples for tracepoints and kprobes
+    # For helper functions, we return "helper"
+
+    for decorator in func_node.decorator_list:
+        if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Name):
+            if decorator.func.id == "section" and len(decorator.args) == 1:
+                arg = decorator.args[0]
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    return arg.value
+    return "helper"
+
+
+def func_proc(tree, module, chunks):
+    for func_node in chunks:
+        func_type = get_probe_string(func_node)
+        print(f"Found probe_string of {func_node.name}: {func_type}")
+
+
 def functions_processing(tree, module):
     bpf_functions = []
     helper_functions = []

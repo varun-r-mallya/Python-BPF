@@ -1,7 +1,7 @@
 import ast
 from llvmlite import ir
 from .license_pass import license_processing
-from .functions_pass import functions_processing
+from .functions_pass import func_proc, functions_processing
 from .constants_pass import constants_processing
 from .globals_pass import globals_processing
 
@@ -26,6 +26,7 @@ def processor(source_code, filename, module):
     for func_node in bpf_chunks:
         print(f"Found BPF function: {func_node.name}")
 
+    func_proc(tree, module, bpf_chunks)
     # For now, we will parse the BPF specific parts of AST
     # Big rewrite
 
