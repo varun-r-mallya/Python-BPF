@@ -9,10 +9,15 @@ from .globals_pass import globals_processing
 def processor(source_code, filename, module):
     tree = ast.parse(source_code, filename)
     print(ast.dump(tree, indent=4))
-    constants_processing(tree, module)
-    license_processing(tree, module)
-    globals_processing(tree, module)
-    functions_processing(tree, module)
+
+    # For now, we will parse the BPF specific parts of AST
+    # Big rewrite
+
+    # will worry later
+    # constants_processing(tree, module)
+    # license_processing(tree, module)
+    # globals_processing(tree, module)
+    # functions_processing(tree, module)
 
 
 def compile_to_ir(filename: str, output: str):

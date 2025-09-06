@@ -1,3 +1,9 @@
+def bpf(func):
+    """Decorator to mark a function for BPF compilation."""
+    func._is_bpf = True
+    return func
+
+
 def section(name: str):
     def wrapper(fn):
         fn._section = name
