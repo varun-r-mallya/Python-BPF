@@ -6,9 +6,25 @@ from .constants_pass import constants_processing
 from .globals_pass import globals_processing
 
 
+def find_bpf_chunks(tree):
+    """Find all functions decorated with @bpf in the AST."""
+    bpf_functions = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            for decorator in node.decorator_list:
+                if isinstance(decorator, ast.Name) and decorator.id == "bpf":
+                    bpf_functions.append(node)
+                    break
+    return bpf_functions
+
+
 def processor(source_code, filename, module):
     tree = ast.parse(source_code, filename)
     print(ast.dump(tree, indent=4))
+
+    bpf_chunks = find_bpf_chunks(tree)
+    for func_node in bpf_chunks:
+        print(f"Found BPF function: {func_node.name}")
 
     # For now, we will parse the BPF specific parts of AST
     # Big rewrite
