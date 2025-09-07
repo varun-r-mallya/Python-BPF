@@ -1,29 +1,21 @@
-import ctypes
 from llvmlite import ir
 
-def ctypes_to_ir(ctype):
-    if ctype is ctypes.c_int32:
-        return ir.IntType(32)
-    if ctype is ctypes.c_int64:
-        return ir.IntType(64)
-    if ctype is ctypes.c_uint8:
-        return ir.IntType(8)
-    if ctype is ctypes.c_double:
-        return ir.DoubleType()
-    if ctype is ctypes.c_float:
-        return ir.FloatType()
-
-    # pointers
-    if hasattr(ctype, "_type_") and hasattr(ctype, "_length_"):
-        # ctypes array
-        return ir.ArrayType(ctypes_to_ir(ctype._type_), ctype._length_)
-
-    # if hasattr(ctype, "_type_") and issubclass(ctype, ctypes._Pointer):
-    #     return ir.PointerType(ctypes_to_ir(ctype._type_))
-
-    # structs
-    if issubclass(ctype, ctypes.Structure):
-        fields = [ctypes_to_ir(f[1]) for f in ctype._fields_]
-        return ir.LiteralStructType(fields)
-
+#TODO: THIS IS NOT SUPPOSED TO MATCH STRINGS :skull:
+def ctypes_to_ir(ctype: str):
+    print("CTYPE", ctype)
+    mapping = {
+        "c_int8": ir.IntType(8),
+        "c_uint8": ir.IntType(8),
+        "c_int16": ir.IntType(16),
+        "c_uint16": ir.IntType(16),
+        "c_int32": ir.IntType(32),
+        "c_uint32": ir.IntType(32),
+        "c_int64": ir.IntType(64),
+        "c_uint64": ir.IntType(64),
+        "c_float": ir.FloatType(),
+        "c_double": ir.DoubleType(),
+        "c_void_p": ir.IntType(64),
+    }
+    if ctype in mapping:
+        return mapping[ctype]
     raise NotImplementedError(f"No mapping for {ctype}")
