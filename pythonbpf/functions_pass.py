@@ -1,7 +1,7 @@
 from llvmlite import ir
 import ast
 
-from .bpf_helper_handler import bpf_printk_emitter
+from .bpf_helper_handler import bpf_printk_emitter, bpf_ktime_get_ns_emitter
 from .type_deducer import ctypes_to_ir
 
 def get_probe_string(func_node):
@@ -29,6 +29,8 @@ def process_func_body(module, builder, func_node, func, ret_type):
             call = stmt.value
             if isinstance(call.func, ast.Name) and call.func.id == "print":
                 bpf_printk_emitter(call, module, builder, func)
+            if isinstance(call.func, ast.Name) and call.func.id == "bpf_ktime_get_ns":
+                bpf_ktime_get_ns_emitter(call, module, builder, func)
         elif isinstance(stmt, ast.Return):
             if stmt.value is None:
                 builder.ret(ir.Constant(ir.IntType(32), 0))
