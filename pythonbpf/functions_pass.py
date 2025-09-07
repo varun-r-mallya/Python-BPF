@@ -13,9 +13,9 @@ def emit_function(module: ir.Module, name: str):
     param.add_attribute("nocapture")
 
     func.attributes.add("nounwind")
-#    func.attributes.add("\"frame-pointer\"=\"all\"")
-#    func.attributes.add("no-trapping-math", "true")
-#    func.attributes.add("stack-protector-buffer-size", "8")
+    # func.attributes.add("\"frame-pointer\"=\"all\"")
+    # func.attributes.add("no-trapping-math", "true")
+    # func.attributes.add("stack-protector-buffer-size", "8")
 
     block = func.append_basic_block(name="entry")
     builder = ir.IRBuilder(block)
@@ -70,17 +70,17 @@ def process_func_body(module, builder, func_node, func):
                 # Handle print statement
                 for arg in call.args:
                     if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                        fmt_str = arg.value + "\n"
+                        fmt_str = arg.value + "\n" + "\0"
                         # Create a global variable for the format string
                         fmt_gvar = ir.GlobalVariable(
                             module, ir.ArrayType(ir.IntType(8), len(fmt_str)), name=f"{func.name}____fmt")
                         fmt_gvar.global_constant = True
-                        fmt_gvar.initializer = ir.Constant(
+                        fmt_gvar.initializer = ir.Constant(     # type: ignore
                             ir.ArrayType(ir.IntType(8), len(fmt_str)),
                             bytearray(fmt_str.encode("utf8"))
                         )
                         fmt_gvar.linkage = "internal"
-                        fmt_gvar.align = 1
+                        fmt_gvar.align = 1      # type: ignore
 
                         # Cast the global variable to i8*
                         fmt_ptr = builder.bitcast(
@@ -129,6 +129,8 @@ def process_bpf_chunk(func_node, module):
 
     func.linkage = "dso_local"
     func.attributes.add("nounwind")
+    func.attributes.add("noinline")
+    func.attributes.add("optnone")
 
     if func_node.args.args:
         # Only look at the first argument for now

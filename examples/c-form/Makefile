@@ -1,19 +1,19 @@
 BPF_CLANG := clang
 CFLAGS := -O2 -emit-llvm -target bpf -c
 
-SRC := ex3.bpf.c
-OUT := ex3.bpf.ll
-OBJECT := ex3.bpf.o
+SRC := $(wildcard *.bpf.c)
+LL := $(SRC:.bpf.c=.bpf.ll)
+OBJ := $(SRC:.bpf.c=.bpf.o)
 
 .PHONY: all clean
 
-all: $(OUT)
-	
-object: $(SRC)
-	$(BPF_CLANG) -O2 -g -target bpf -c $< -o $(OBJECT)
+all: $(LL) $(OBJ)
 
-$(OUT): $(SRC) object
+%.bpf.o: %.bpf.c
+	$(BPF_CLANG) -O2 -target bpf -c $< -o $@
+
+%.bpf.ll: %.bpf.c
 	$(BPF_CLANG) $(CFLAGS) -S $< -o $@
 
 clean:
-	rm -f $(OUT) $(OBJECT)
+	rm -f $(LL) $(OBJ)

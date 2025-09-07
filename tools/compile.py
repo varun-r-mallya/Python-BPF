@@ -14,7 +14,7 @@ def main():
     codegen.compile_to_ir(args.source, ll_file)
 
     print("[+] Running llc -march=bpf")
-    subprocess.run(["llc", "-march=bpf", "-filetype=obj", ll_file, "-o", o_file], check=True)
+    subprocess.run(["llc", "-march=bpf", "-filetype=obj", "-O2", ll_file, "-o", o_file], check=True)
 
 if __name__ == "__main__":
     main()

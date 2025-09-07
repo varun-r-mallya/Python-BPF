@@ -31,8 +31,8 @@ def globals_processing(tree, module: ir.Module):
     collected = ["LICENSE"]
 
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and len(node.decorator_list) == 1:
-            dec = node.decorator_list[0]
+        if isinstance(node, ast.FunctionDef) and len(node.decorator_list) == 2:
+            dec = node.decorator_list[1]
             if (
                 isinstance(dec, ast.Call)
                 and isinstance(dec.func, ast.Name)

@@ -1,8 +1,8 @@
 import ast
 from llvmlite import ir
 from .license_pass import license_processing
-from .functions_pass import func_proc, functions_processing
-from .constants_pass import constants_processing
+from .functions_pass import func_proc
+# from .constants_pass import constants_processing
 from .globals_pass import globals_processing
 
 
@@ -28,12 +28,10 @@ def processor(source_code, filename, module):
 
     func_proc(tree, module, bpf_chunks)
     # For now, we will parse the BPF specific parts of AST
-    # Big rewrite
 
-    # will worry later
     # constants_processing(tree, module)
-    # license_processing(tree, module)
-    # globals_processing(tree, module)
+    license_processing(tree, module)
+    globals_processing(tree, module)
     # functions_processing(tree, module)
 
 
@@ -57,6 +55,7 @@ def compile_to_ir(filename: str, output: str):
     module.add_named_metadata("llvm.ident", ["llvmlite PythonBPF v0.0.0"])
 
     with open(output, "w") as f:
+        f.write(f"source_filename = \"{filename}\"\n")
         f.write(str(module))
 
     return output
