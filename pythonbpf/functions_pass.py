@@ -143,6 +143,7 @@ def process_bpf_chunk(func_node, module):
     process_func_body(module, builder, func_node, func)
 
     print(func)
+    print(module)
     return func
 
 
