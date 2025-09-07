@@ -10,7 +10,7 @@ OBJ := $(SRC:.bpf.c=.bpf.o)
 all: $(LL) $(OBJ)
 
 %.bpf.o: %.bpf.c
-	$(BPF_CLANG) -O2 -target bpf -c $< -o $@
+	$(BPF_CLANG) -O2 -g -target bpf -c $< -o $@
 
 %.bpf.ll: %.bpf.c
 	$(BPF_CLANG) $(CFLAGS) -S $< -o $@
