@@ -11,7 +11,7 @@ struct {
     __type(value, u64);
 } last SEC(".maps");
 
-SEC("kprobe/YOUR_PROBE_POINT")  // Replace with actual probe point
+SEC("kprobe/sys_clone")  // Replace with actual probe point
 int do_trace(struct pt_regs *ctx) {
     u64 ts, *tsp, delta, key = 0;
 
