@@ -3,7 +3,7 @@
 
 SEC("kprobe/sys_clone")
 int hello(struct pt_regs *ctx) {
-    bpf_printk("Hello, World!");
+    bpf_printk("Hello, World!\n");
     return 0;
 }
 
