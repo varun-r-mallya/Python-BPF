@@ -4,6 +4,12 @@ def bpf(func):
     return func
 
 
+def bpfglobal(func):
+    """Decorator to mark a function as a BPF global variable."""
+    func._is_bpfglobal = True
+    return func
+
+
 def section(name: str):
     def wrapper(fn):
         fn._section = name
