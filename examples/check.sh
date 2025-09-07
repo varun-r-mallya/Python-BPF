@@ -14,7 +14,7 @@ case "$1" in
         sudo bpftool prog loadall "$FILE" "$PIN_PATH" autoattach
         echo "[+] Program loaded. Press Ctrl+C to stop"
         sudo cat /sys/kernel/debug/tracing/trace_pipe
-        sudo rm -f "$PIN_PATH"
+        sudo rm -rf "$PIN_PATH"
         echo "[+] Stopped"
         ;;
     stop)
