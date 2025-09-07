@@ -11,7 +11,7 @@ case "$1" in
         ;;
     run)
         echo "[*] Loading and running $FILE"
-        sudo bpftool prog load "$FILE" "$PIN_PATH" autoattach
+        sudo bpftool prog loadall "$FILE" "$PIN_PATH" autoattach
         echo "[+] Program loaded. Press Ctrl+C to stop"
         sudo cat /sys/kernel/debug/tracing/trace_pipe
         sudo rm -f "$PIN_PATH"

@@ -6,12 +6,13 @@ from ctypes import c_void_p, c_int64, c_int32
 @section("tracepoint/syscalls/sys_enter_execve")
 def hello(ctx: c_void_p) -> c_int32:
     print("entered")
+    print("multi constant support")
     return c_int32(0)
 
 @bpf
 @section("tracepoint/syscalls/sys_exit_execve")
-def hello_again(ctx: c_void_p) -> c_int64:
+def hello_again(ctx: c_void_p) -> c_int32:
     print("exited")
-    return c_int64(0)
+    return c_int32(0)
 
 LICENSE = "GPL"

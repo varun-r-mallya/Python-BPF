@@ -2,7 +2,6 @@ from llvmlite import ir
 
 #TODO: THIS IS NOT SUPPOSED TO MATCH STRINGS :skull:
 def ctypes_to_ir(ctype: str):
-    print("CTYPE", ctype)
     mapping = {
         "c_int8": ir.IntType(8),
         "c_uint8": ir.IntType(8),
