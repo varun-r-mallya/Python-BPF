@@ -18,20 +18,28 @@ def emit_license(module: ir.Module, license_str: str):
     return gvar
 
 def license_processing(tree, module):
-    """Process the LICENSE assignment in the given AST tree and return the section name"""
+    """Process the LICENSE function decorated with @bpf and @bpfglobal and return the section name"""
     count = 0
     for node in tree.body:
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "LICENSE":
-                    if count == 0:
-                        count += 1
-                        if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                            emit_license(module, node.value.value)
-                            return "LICENSE"
-                        else:
-                            print("ERROR: LICENSE must be a string literal")
-                            return None
+        if isinstance(node, ast.FunctionDef) and node.name == "LICENSE":
+            # check decorators
+            decorators = [dec.id for dec in node.decorator_list if isinstance(dec, ast.Name)]
+            if "bpf" in decorators and "bpfglobal" in decorators:
+                if count == 0:
+                    count += 1
+                    # check function body has a return string
+                    if (
+                        len(node.body) == 1
+                        and isinstance(node.body[0], ast.Return)
+                        and isinstance(node.body[0].value, ast.Constant)
+                        and isinstance(node.body[0].value.value, str)
+                    ):
+                        emit_license(module, node.body[0].value.value)
+                        return "LICENSE"
                     else:
-                        print("ERROR: LICENSE already assigned")
+                        print("ERROR: LICENSE() must return a string literal")
                         return None
+                else:
+                    print("ERROR: LICENSE already defined")
+                    return None
+    return None

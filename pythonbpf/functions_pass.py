@@ -12,6 +12,8 @@ def get_probe_string(func_node):
     # For helper functions, we return "helper"
 
     for decorator in func_node.decorator_list:
+        if isinstance(decorator, ast.Name) and decorator.id == "bpfglobal":
+            return None
         if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Name):
             if decorator.func.id == "section" and len(decorator.args) == 1:
                 arg = decorator.args[0]
@@ -134,7 +136,9 @@ def process_bpf_chunk(func_node, module, return_type, map_sym_tab):
         param = func.args[0]
         param.add_attribute("nocapture")
 
-    func.section = get_probe_string(func_node)
+    probe_string = get_probe_string(func_node)
+    if probe_string is not None:
+        func.section = probe_string
 
     block = func.append_basic_block(name="entry")
     builder = ir.IRBuilder(block)
@@ -149,6 +153,9 @@ def func_proc(tree, module, chunks, map_sym_tab):
         is_global = False
         for decorator in func_node.decorator_list:
             if isinstance(decorator, ast.Name) and decorator.id == "map":
+                is_global = True
+                break
+            elif isinstance(decorator, ast.Name) and decorator.id == "bpfglobal":
                 is_global = True
                 break
         if is_global:

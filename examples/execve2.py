@@ -28,10 +28,7 @@ def hello_again(ctx: c_void_p) -> c_int64:
     ts = bpf_ktime_get_ns()
     return c_int64(0)
 
-# @bpf
-# @bpfglobal
-# def LICENSE() -> str:
-#     return "GPL"
-
-
-LICENSE = "GPL"
+@bpf
+@bpfglobal
+def LICENSE() -> str:
+    return "GPL"
