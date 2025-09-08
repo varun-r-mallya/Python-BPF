@@ -1,7 +1,7 @@
 from llvmlite import ir
 import ast
 
-from .bpf_helper_handler import bpf_printk_emitter, bpf_ktime_get_ns_emitter
+from .bpf_helper_handler import bpf_printk_emitter, bpf_ktime_get_ns_emitter, bpf_map_lookup_elem_emitter
 from .type_deducer import ctypes_to_ir
 
 
@@ -79,28 +79,31 @@ def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
                             key_type = ir.IntType(64)
                             print(f"Key type: {key_type}")
                             print(f"Key val: {key_val}")
+                            key_var = builder.alloca(key_type)
+                            key_var.align = key_type // 8
+                            builder.store(ir.Constant(
+                                key_type, key_val), key_var)
                         elif isinstance(key_arg, ast.Name):
                             # Check in local symtab first
                             if key_arg.id in local_sym_tab:
                                 key_var = local_sym_tab[key_arg.id]
                                 key_type = key_var.type.pointee
-                                key_val = builder.load(key_var)
                             elif key_arg.id in map_sym_tab:
                                 key_var = map_sym_tab[key_arg.id]
                                 key_type = key_var.type.pointee
-                                key_val = builder.load(key_var)
                             else:
                                 print("Key variable "
                                       f"{key_arg.id} not found in symtabs")
                                 return
                             print(f"Found key variable {key_arg.id} in symtab")
                             print(f"Key type: {key_type}")
-                            print(f"Key val: {key_val}")
                         else:
                             print("Unsupported lookup key arg")
                             return
 
                         # TODO: generate call to bpf_map_lookup_elem
+                        result_ptr = bpf_map_lookup_elem_emitter(
+                            map_global, key_var, module, builder)
 
                     else:
                         print(f"Map {map_name} not found in symbol table")

@@ -6,6 +6,32 @@ def bpf_ktime_get_ns_emitter(call, module, builder, func):
     pass
 
 
+def bpf_map_lookup_elem_emitter(map_ptr, key_ptr, module, builder):
+    """
+    Emit LLVM IR for bpf_map_lookup_elem helper function call.
+    """
+    # Cast pointers to void*
+    map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
+
+    # Define function type for bpf_map_lookup_elem
+    # The function takes two void* arguments and returns void*
+    fn_type = ir.FunctionType(
+        ir.PointerType(),  # Return type: void*
+        [ir.PointerType(), ir.PointerType()],  # Args: (void*, void*)
+        var_arg=False
+    )
+    fn_ptr_type = ir.PointerType(fn_type)
+
+    # Helper ID 1 is bpf_map_lookup_elem
+    fn_addr = ir.Constant(ir.IntType(64), 1)
+    fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
+
+    # Call the helper function
+    result = builder.call(fn_ptr, [map_void_ptr, key_ptr], tail=False)
+
+    return result
+
+
 def bpf_printk_emitter(call, module, builder, func):
     if not hasattr(func, "_fmt_counter"):
         func._fmt_counter = 0
