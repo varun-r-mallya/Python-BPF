@@ -84,8 +84,6 @@ def process_bpf_chunk(func_node, module, return_type):
 
     process_func_body(module, builder, func_node, func, ret_type)
 
-    print(func)
-    print(module)
     return func
 
 

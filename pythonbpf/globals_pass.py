@@ -16,9 +16,6 @@ def emit_globals(module: ir.Module, names: list[str]):
             g = module.get_global(name)
         else:
             g = ir.GlobalValue(module, ptr_ty, name)
-        print("global emitted:", name)
-        print(isinstance(g, ir.GlobalVariable))
-        print(isinstance(g, ir.Function))
         elems.append(g.bitcast(ptr_ty))
 
     gv = ir.GlobalVariable(module, used_array_ty, "llvm.compiler.used")
@@ -31,16 +28,19 @@ def globals_processing(tree, module: ir.Module):
     collected = ["LICENSE"]
 
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and len(node.decorator_list) == 2:
-            dec = node.decorator_list[1]
-            if (
-                isinstance(dec, ast.Call)
-                and isinstance(dec.func, ast.Name)
-                and dec.func.id == "section"
-                and len(dec.args) == 1
-                and isinstance(dec.args[0], ast.Constant)
-                and isinstance(dec.args[0].value, str)
-            ):
-                collected.append(node.name)
+        if isinstance(node, ast.FunctionDef):
+            for dec in node.decorator_list:
+                if (
+                    isinstance(dec, ast.Call)
+                    and isinstance(dec.func, ast.Name)
+                    and dec.func.id == "section"
+                    and len(dec.args) == 1
+                    and isinstance(dec.args[0], ast.Constant)
+                    and isinstance(dec.args[0].value, str)
+                ):
+                    collected.append(node.name)
+
+                elif isinstance(dec, ast.Name) and dec.id == "bpfglobal":
+                    collected.append(node.name)
 
     emit_globals(module, collected)
