@@ -4,15 +4,15 @@ from .type_deducer import ctypes_to_ir
 
 def maps_proc(tree, module, chunks):
     for func_node in chunks:
-        # Check if this function is a global
-        is_global = False
+        # Check if this function is a map
+        is_map = False
         for decorator in func_node.decorator_list:
             if isinstance(decorator, ast.Name) and decorator.id == "map":
-                is_global = True
+                is_map = True
                 break
-        if is_global:
+        if is_map:
             print(f"Found BPF map: {func_node.name}")
-            process_bpf_global(func_node, module)
+            process_bpf_map(func_node, module)
             continue
 
 
@@ -34,10 +34,10 @@ def create_bpf_map(module, map_name, map_params):
 
     map_global = ir.GlobalVariable(module, map_struct_type, name=map_name)
     map_global.linkage = 'external'
-    map_global.initializer = ir.Constant(
+    map_global.initializer = ir.Constant(       #   type: ignore
         map_struct_type, [None, None, None, None])
     map_global.section = ".maps"
-    map_global.align = 8
+    map_global.align = 8        # type: ignore
 
     # TODO: Store map parameters in metadata or a suitable structure
     # maps[map_name] = {
@@ -52,10 +52,10 @@ def create_bpf_map(module, map_name, map_params):
     return map_global
 
 
-def process_bpf_global(func_node, module):
-    """Process a BPF global (a function decorated with @bpfglobal)"""
-    global_name = func_node.name
-    print(f"Processing BPF global: {global_name}")
+def process_bpf_map(func_node, module):
+    """Process a BPF map (a function decorated with @map)"""
+    map_name = func_node.name
+    print(f"Processing BPF map: {map_name}")
 
     # For now, assume single return statement
     return_stmt = None
@@ -64,13 +64,13 @@ def process_bpf_global(func_node, module):
             return_stmt = stmt
             break
     if return_stmt is None:
-        raise ValueError("BPF global must have a return statement")
+        raise ValueError("BPF map must have a return statement")
 
     rval = return_stmt.value
 
     # For now, just handle maps
     if isinstance(rval, ast.Call) and isinstance(rval.func, ast.Name) and rval.func.id == "HashMap":
-        print(f"Creating HashMap global: {global_name}")
+        print(f"Creating HashMap map: {map_name}")
         map_params = {'map_type': 'HASH'}
         # Handle positional arguments
         if rval.args:
@@ -91,4 +91,4 @@ def process_bpf_global(func_node, module):
             elif keyword.arg == "max_entries" and isinstance(keyword.value, ast.Constant):
                 map_params['max_entries'] = keyword.value.value
         print(f"Map parameters: {map_params}")
-        print(create_bpf_map(module, global_name, map_params))
+        print(create_bpf_map(module, map_name, map_params))
