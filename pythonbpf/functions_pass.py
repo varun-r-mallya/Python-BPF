@@ -22,7 +22,7 @@ def get_probe_string(func_node):
     return "helper"
 
 
-def handle_assign(module, builder, stmt, map_sym_tab):
+def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
     """Handle assignment statements in the function body."""
     if len(stmt.targets) != 1:
         print("Unsupported multiassignment")
@@ -43,6 +43,7 @@ def handle_assign(module, builder, stmt, map_sym_tab):
             var = builder.alloca(ir.IntType(64), name=var_name)
             var.align = 8
             builder.store(ir.Constant(ir.IntType(64), rval.value), var)
+            local_sym_tab[var_name] = var
             print(f"Assigned constant {rval.value} to {var_name}")
     elif isinstance(rval, ast.Call):
         if isinstance(rval.func, ast.Name):
@@ -55,6 +56,7 @@ def handle_assign(module, builder, stmt, map_sym_tab):
                 builder.store(ir.Constant(ir_type, rval.args[0].value), var)
                 print(f"Assigned {call_type} constant "
                       f"{rval.args[0].value} to {var_name}")
+                local_sym_tab[var_name] = var
             else:
                 print(f"Unsupported assignment call type: {call_type}")
         elif isinstance(rval.func, ast.Attribute):
@@ -71,6 +73,35 @@ def handle_assign(module, builder, stmt, map_sym_tab):
                             return
                         key_arg = rval.args[0]
                         print(f"Lookup key arg type: {type(key_arg)}")
+                        # TODO: implement a parse_arg ffs as this can be a fucking expr
+                        if isinstance(key_arg, ast.Constant) and isinstance(key_arg.value, int):
+                            key_val = key_arg.value
+                            key_type = ir.IntType(64)
+                            print(f"Key type: {key_type}")
+                            print(f"Key val: {key_val}")
+                        elif isinstance(key_arg, ast.Name):
+                            # Check in local symtab first
+                            if key_arg.id in local_sym_tab:
+                                key_var = local_sym_tab[key_arg.id]
+                                key_type = key_var.type.pointee
+                                key_val = builder.load(key_var)
+                            elif key_arg.id in map_sym_tab:
+                                key_var = map_sym_tab[key_arg.id]
+                                key_type = key_var.type.pointee
+                                key_val = builder.load(key_var)
+                            else:
+                                print("Key variable "
+                                      f"{key_arg.id} not found in symtabs")
+                                return
+                            print(f"Found key variable {key_arg.id} in symtab")
+                            print(f"Key type: {key_type}")
+                            print(f"Key val: {key_val}")
+                        else:
+                            print("Unsupported lookup key arg")
+                            return
+
+                        # TODO: generate call to bpf_map_lookup_elem
+
                     else:
                         print(f"Map {map_name} not found in symbol table")
             else:
@@ -82,6 +113,8 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
     # TODO: A lot.  We just have print -> bpf_trace_printk for now
     did_return = False
 
+    local_sym_tab = {}
+
     for stmt in func_node.body:
         if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
             call = stmt.value
@@ -90,7 +123,7 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
             if isinstance(call.func, ast.Name) and call.func.id == "bpf_ktime_get_ns":
                 bpf_ktime_get_ns_emitter(call, module, builder, func)
         elif isinstance(stmt, ast.Assign):
-            handle_assign(module, builder, stmt, map_sym_tab)
+            handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab)
         elif isinstance(stmt, ast.Return):
             if stmt.value is None:
                 builder.ret(ir.Constant(ir.IntType(32), 0))
