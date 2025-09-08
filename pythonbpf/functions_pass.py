@@ -90,19 +90,11 @@ def process_bpf_chunk(func_node, module, return_type):
 def create_bpf_map(module, map_name, map_params):
     """Create a BPF map in the module with the given parameters"""
 
-    type_mapping = {
-        'c_uint32': ir.IntType(32),
-        'c_uint64': ir.IntType(64),
-        'c_int32': ir.IntType(32),
-        'c_int64': ir.IntType(64),
-        # Add more mappings as needed
-    }
-
     key_type_str = map_params.get('key_type', 'c_uint32')
     value_type_str = map_params.get('value_type', 'c_uint32')
 
-    key_type = type_mapping.get(key_type_str, ir.IntType(32))
-    value_type = type_mapping.get(value_type_str, ir.IntType(32))
+    key_type = ctypes_to_ir(key_type_str)
+    value_type = ctypes_to_ir(value_type_str)
 
     map_struct_type = ir.LiteralStructType([
         ir.PointerType(),  # type

@@ -42,5 +42,8 @@ def globals_processing(tree, module: ir.Module):
 
                 elif isinstance(dec, ast.Name) and dec.id == "bpfglobal":
                     collected.append(node.name)
+                
+                elif isinstance(dec, ast.Name) and dec.id == "map":
+                    collected.append(node.name)
 
     emit_globals(module, collected)

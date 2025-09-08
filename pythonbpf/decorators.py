@@ -9,6 +9,10 @@ def bpfglobal(func):
     func._is_bpfglobal = True
     return func
 
+def map(func):
+    """Decorator to mark a function as a BPF map."""
+    func._is_map = True
+    return func
 
 def section(name: str):
     def wrapper(fn):
