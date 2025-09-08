@@ -3,7 +3,6 @@ from llvmlite import ir
 from .license_pass import license_processing
 from .functions_pass import func_proc
 from .maps_pass import maps_proc
-# from .constants_pass import constants_processing
 from .globals_pass import globals_processing
 
 
@@ -29,12 +28,9 @@ def processor(source_code, filename, module):
 
     map_sym_tab = maps_proc(tree, module, bpf_chunks)
     func_proc(tree, module, bpf_chunks, map_sym_tab)
-    # For now, we will parse the BPF specific parts of AST
 
-    # constants_processing(tree, module)
     license_processing(tree, module)
     globals_processing(tree, module)
-    # functions_processing(tree, module)
 
 
 def compile_to_ir(filename: str, output: str):
