@@ -18,38 +18,55 @@ def maps_proc(tree, module, chunks):
 
 def create_bpf_map(module, map_name, map_params):
     """Create a BPF map in the module with the given parameters"""
-
-    key_type_str = map_params.get('key_type', 'c_uint32')
-    value_type_str = map_params.get('value_type', 'c_uint32')
-
-    key_type = ctypes_to_ir(key_type_str)
-    value_type = ctypes_to_ir(value_type_str)
-
+    
+    # Create the anonymous struct type for BPF map
     map_struct_type = ir.LiteralStructType([
-        ir.PointerType(),  # type
-        ir.PointerType(),  # max_entries
-        ir.PointerType(),  # key_type
-        ir.PointerType()   # value_type
+        ir.PointerType(),
+        ir.PointerType(),
+        ir.PointerType(),
+        ir.PointerType()
     ])
-
+    
+    # Create the global variable
     map_global = ir.GlobalVariable(module, map_struct_type, name=map_name)
-    map_global.linkage = 'external'
-    map_global.initializer = ir.Constant(       #   type: ignore
-        map_struct_type, [None, None, None, None])
+    map_global.linkage = 'dso_local'
+    map_global.global_constant = False
+    
+    # Initialize with zeroinitializer (all null pointers)
+    map_global.initializer = ir.Constant(map_struct_type, None)     #type: ignore
+    
     map_global.section = ".maps"
-    map_global.align = 8        # type: ignore
-
-    # TODO: Store map parameters in metadata or a suitable structure
-    # maps[map_name] = {
-    #    'global': map_global,
-    #    'key_type': key_type,
-    #    'value_type': value_type,
-    #    'max_entries': map_params.get('max_entries', 1),
-    #    'map_type': map_params.get('map_type', 'BPF_MAP_TYPE_HASH')
-    # }
+    map_global.align = 8    # type: ignore
 
     print(f"Created BPF map: {map_name}")
     return map_global
+
+def process_hash_map(map_name, rval, module):
+    print(f"Creating HashMap map: {map_name}")
+    map_params: dict[str, object] = {"map_type": "HASH"}
+
+    # Assuming order: key_type, value_type, max_entries
+    if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
+        map_params["key_type"] = rval.args[0].id
+    if len(rval.args) >= 2 and isinstance(rval.args[1], ast.Name):
+        map_params["value_type"] = rval.args[1].id
+    if len(rval.args) >= 3 and isinstance(rval.args[2], ast.Constant):
+        const_val = rval.args[2].value
+        if isinstance(const_val, (int, str)):  # safe check
+            map_params["max_entries"] = const_val
+
+    for keyword in rval.keywords:
+        if keyword.arg == "key_type" and isinstance(keyword.value, ast.Name):
+            map_params["key_type"] = keyword.value.id
+        elif keyword.arg == "value_type" and isinstance(keyword.value, ast.Name):
+            map_params["value_type"] = keyword.value.id
+        elif keyword.arg == "max_entries" and isinstance(keyword.value, ast.Constant):
+            const_val = keyword.value.value
+            if isinstance(const_val, (int, str)):
+                map_params["max_entries"] = const_val
+
+    print(f"Map parameters: {map_params}")
+    return create_bpf_map(module, map_name, map_params)
 
 
 def process_bpf_map(func_node, module):
@@ -68,27 +85,8 @@ def process_bpf_map(func_node, module):
 
     rval = return_stmt.value
 
-    # For now, just handle maps
+    # Handle only HashMap maps
     if isinstance(rval, ast.Call) and isinstance(rval.func, ast.Name) and rval.func.id == "HashMap":
-        print(f"Creating HashMap map: {map_name}")
-        map_params = {'map_type': 'HASH'}
-        # Handle positional arguments
-        if rval.args:
-            # Assuming order is: key_type, value_type, max_entries
-            if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
-                map_params['key_type'] = rval.args[0].id
-            if len(rval.args) >= 2 and isinstance(rval.args[1], ast.Name):
-                map_params['value_type'] = rval.args[1].id
-            if len(rval.args) >= 3 and isinstance(rval.args[2], ast.Constant):
-                map_params['max_entries'] = rval.args[2].value
-
-            # Handle keyword arguments (these will override any positional args)
-        for keyword in rval.keywords:
-            if keyword.arg == "key_type" and isinstance(keyword.value, ast.Name):
-                map_params['key_type'] = keyword.value.id
-            elif keyword.arg == "value_type" and isinstance(keyword.value, ast.Name):
-                map_params['value_type'] = keyword.value.id
-            elif keyword.arg == "max_entries" and isinstance(keyword.value, ast.Constant):
-                map_params['max_entries'] = keyword.value.value
-        print(f"Map parameters: {map_params}")
-        print(create_bpf_map(module, map_name, map_params))
+        process_hash_map(map_name, rval, module)
+    else:
+        raise ValueError("Function under @map must return a map")

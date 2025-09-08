@@ -13,7 +13,7 @@ all: $(LL) $(OBJ)
 	$(BPF_CLANG) -O2 -g -target bpf -c $< -o $@
 
 %.bpf.ll: %.bpf.c
-	$(BPF_CLANG) $(CFLAGS) -S $< -o $@
+	$(BPF_CLANG) $(CFLAGS) -g -S $< -o $@
 
 clean:
 	rm -f $(LL) $(OBJ)
