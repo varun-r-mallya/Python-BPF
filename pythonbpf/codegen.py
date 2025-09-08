@@ -27,8 +27,8 @@ def processor(source_code, filename, module):
     for func_node in bpf_chunks:
         print(f"Found BPF function: {func_node.name}")
 
-    maps_proc(tree, module, bpf_chunks)
-    func_proc(tree, module, bpf_chunks)
+    map_sym_tab = maps_proc(tree, module, bpf_chunks)
+    func_proc(tree, module, bpf_chunks, map_sym_tab)
     # For now, we will parse the BPF specific parts of AST
 
     # constants_processing(tree, module)

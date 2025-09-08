@@ -86,7 +86,8 @@ def process_bpf_chunk(func_node, module, return_type):
 
     return func
 
-def func_proc(tree, module, chunks):
+
+def func_proc(tree, module, chunks, map_sym_tab):
     for func_node in chunks:
         is_global = False
         for decorator in func_node.decorator_list:

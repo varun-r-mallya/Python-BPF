@@ -17,6 +17,7 @@ def maps_proc(tree, module, chunks):
             print(f"Found BPF map: {func_node.name}")
             process_bpf_map(func_node, module)
             continue
+    return map_sym_tab
 
 
 def create_bpf_map(module, map_name, map_params):
