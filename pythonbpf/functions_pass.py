@@ -20,7 +20,62 @@ def get_probe_string(func_node):
     return "helper"
 
 
-def process_func_body(module, builder, func_node, func, ret_type):
+def handle_assign(module, builder, stmt, map_sym_tab):
+    """Handle assignment statements in the function body."""
+    if len(stmt.targets) != 1:
+        print("Unsupported multiassignment")
+        return
+
+    num_types = ("c_int32", "c_int64", "c_uint32", "c_uint64")
+
+    target = stmt.targets[0]
+    if not isinstance(target, ast.Name):
+        print("Unsupported assignment target")
+        return
+    var_name = target.id
+    rval = stmt.value
+    if isinstance(rval, ast.Constant):
+        if isinstance(rval.value, int):
+            # Assume c_int64 for now
+            # TODO: make symtab for this
+            var = builder.alloca(ir.IntType(64), name=var_name)
+            var.align = 8
+            builder.store(ir.Constant(ir.IntType(64), rval.value), var)
+            print(f"Assigned constant {rval.value} to {var_name}")
+    elif isinstance(rval, ast.Call):
+        if isinstance(rval.func, ast.Name):
+            call_type = rval.func.id
+            print(f"Assignment call type: {call_type}")
+            if call_type in num_types and len(rval.args) == 1 and isinstance(rval.args[0], ast.Constant) and isinstance(rval.args[0].value, int):
+                ir_type = ctypes_to_ir(call_type)
+                var = builder.alloca(ir_type, name=var_name)
+                var.align = ir_type.width // 8
+                builder.store(ir.Constant(ir_type, rval.args[0].value), var)
+                print(f"Assigned {call_type} constant "
+                      f"{rval.args[0].value} to {var_name}")
+            else:
+                print(f"Unsupported assignment call type: {call_type}")
+        elif isinstance(rval.func, ast.Attribute):
+            if isinstance(rval.func.attr, str) and rval.func.attr == "lookup":
+                # Get map name and check symtab
+                # maps are called as funcs
+                if isinstance(rval.func.value, ast.Call) and isinstance(rval.func.value.func, ast.Name):
+                    map_name = rval.func.value.func.id
+                    if map_name in map_sym_tab:
+                        map_global = map_sym_tab[map_name]
+                        print(f"Found map {map_name} in symtab for lookup")
+                        if len(rval.args) != 1:
+                            print("Unsupported lookup with != 1 arg")
+                            return
+                        key_arg = rval.args[0]
+                        print(f"Lookup key arg type: {type(key_arg)}")
+                    else:
+                        print(f"Map {map_name} not found in symbol table")
+            else:
+                print("Unsupported assignment from method call")
+
+
+def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
     """Process the body of a bpf function"""
     # TODO: A lot.  We just have print -> bpf_trace_printk for now
     did_return = False
@@ -32,6 +87,8 @@ def process_func_body(module, builder, func_node, func, ret_type):
                 bpf_printk_emitter(call, module, builder, func)
             if isinstance(call.func, ast.Name) and call.func.id == "bpf_ktime_get_ns":
                 bpf_ktime_get_ns_emitter(call, module, builder, func)
+        elif isinstance(stmt, ast.Assign):
+            handle_assign(module, builder, stmt, map_sym_tab)
         elif isinstance(stmt, ast.Return):
             if stmt.value is None:
                 builder.ret(ir.Constant(ir.IntType(32), 0))
@@ -51,7 +108,7 @@ def process_func_body(module, builder, func_node, func, ret_type):
         builder.ret(ir.Constant(ir.IntType(32), 0))
 
 
-def process_bpf_chunk(func_node, module, return_type):
+def process_bpf_chunk(func_node, module, return_type, map_sym_tab):
     """Process a single BPF chunk (function) and emit corresponding LLVM IR."""
 
     func_name = func_node.name
@@ -82,7 +139,7 @@ def process_bpf_chunk(func_node, module, return_type):
     block = func.append_basic_block(name="entry")
     builder = ir.IRBuilder(block)
 
-    process_func_body(module, builder, func_node, func, ret_type)
+    process_func_body(module, builder, func_node, func, ret_type, map_sym_tab)
 
     return func
 
@@ -100,7 +157,7 @@ def func_proc(tree, module, chunks, map_sym_tab):
         print(f"Found probe_string of {func_node.name}: {func_type}")
 
         process_bpf_chunk(func_node, module, ctypes_to_ir(
-            infer_return_type(func_node)))
+            infer_return_type(func_node)), map_sym_tab)
 
 
 def infer_return_type(func_node: ast.FunctionDef):
