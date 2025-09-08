@@ -2,6 +2,9 @@ import ast
 from llvmlite import ir
 from .type_deducer import ctypes_to_ir
 
+map_sym_tab = {}
+
+
 def maps_proc(tree, module, chunks):
     for func_node in chunks:
         # Check if this function is a map
@@ -18,7 +21,7 @@ def maps_proc(tree, module, chunks):
 
 def create_bpf_map(module, map_name, map_params):
     """Create a BPF map in the module with the given parameters"""
-    
+
     # Create the anonymous struct type for BPF map
     map_struct_type = ir.LiteralStructType([
         ir.PointerType(),
@@ -26,20 +29,22 @@ def create_bpf_map(module, map_name, map_params):
         ir.PointerType(),
         ir.PointerType()
     ])
-    
+
     # Create the global variable
     map_global = ir.GlobalVariable(module, map_struct_type, name=map_name)
     map_global.linkage = 'dso_local'
     map_global.global_constant = False
-    
+
     # Initialize with zeroinitializer (all null pointers)
-    map_global.initializer = ir.Constant(map_struct_type, None)     #type: ignore
-    
+    map_global.initializer = ir.Constant(map_struct_type, None)  # type: ignore
+
     map_global.section = ".maps"
     map_global.align = 8    # type: ignore
 
     print(f"Created BPF map: {map_name}")
+    map_sym_tab[map_name] = map_global
     return map_global
+
 
 def process_hash_map(map_name, rval, module):
     print(f"Creating HashMap map: {map_name}")
