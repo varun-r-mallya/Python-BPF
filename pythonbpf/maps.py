@@ -5,4 +5,10 @@ class HashMap:
         self.max_entries = max_entries
         self.entries = {}
         
+    def lookup(self, key):
+        if key in self.entries:
+            return self.entries[key]
+        else:
+            return None
+
     # add other supported map functions here
