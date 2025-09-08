@@ -22,6 +22,9 @@ def hello(ctx: c_void_p) -> c_int32:
 @section("tracepoint/syscalls/sys_exit_execve")
 def hello_again(ctx: c_void_p) -> c_int64:
     print("exited")
+    key = c_int64(0)
+    tsp = last.lookup(key)
+    print(tsp)
     ts = bpf_ktime_get_ns()
     return c_int64(0)
 
