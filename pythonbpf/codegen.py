@@ -52,8 +52,21 @@ def compile_to_ir(filename: str, output: str):
     frame_pointer = module.add_metadata([ir.Constant(ir.IntType(32), 7),
                                          "frame-pointer",
                                          ir.Constant(ir.IntType(32), 2)])
+    # Add Debug Info Version (3 = DWARF v3, which LLVM expects)
+    debug_info_version = module.add_metadata([ir.Constant(ir.IntType(32), 2),
+                                              "Debug Info Version",
+                                              ir.Constant(ir.IntType(32), 3)])
+
+    # Add explicit DWARF version (4 is common, works with LLVM BPF backend)
+    dwarf_version = module.add_metadata([ir.Constant(ir.IntType(32), 2),
+                                         "Dwarf Version",
+                                         ir.Constant(ir.IntType(32), 4)])
+
     module.add_named_metadata("llvm.module.flags", wchar_size)
     module.add_named_metadata("llvm.module.flags", frame_pointer)
+    module.add_named_metadata("llvm.module.flags", debug_info_version)
+    module.add_named_metadata("llvm.module.flags", dwarf_version)
+
     module.add_named_metadata("llvm.ident", ["llvmlite PythonBPF v0.0.0"])
 
     with open(output, "w") as f:
