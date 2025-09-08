@@ -1,6 +1,7 @@
 from llvmlite import ir
 import ast
 
+
 def emit_license(module: ir.Module, license_str: str):
     license_bytes = license_str.encode("utf8") + b"\x00"
     elems = [ir.Constant(ir.IntType(8), b) for b in license_bytes]
@@ -17,13 +18,15 @@ def emit_license(module: ir.Module, license_str: str):
 
     return gvar
 
+
 def license_processing(tree, module):
     """Process the LICENSE function decorated with @bpf and @bpfglobal and return the section name"""
     count = 0
     for node in tree.body:
         if isinstance(node, ast.FunctionDef) and node.name == "LICENSE":
             # check decorators
-            decorators = [dec.id for dec in node.decorator_list if isinstance(dec, ast.Name)]
+            decorators = [
+                dec.id for dec in node.decorator_list if isinstance(dec, ast.Name)]
             if "bpf" in decorators and "bpfglobal" in decorators:
                 if count == 0:
                     count += 1

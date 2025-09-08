@@ -1,8 +1,10 @@
 import ast
 from llvmlite import ir
 
+
 def bpf_ktime_get_ns_emitter(call, module, builder, func):
     pass
+
 
 def bpf_printk_emitter(call, module, builder, func):
     if not hasattr(func, "_fmt_counter"):

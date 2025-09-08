@@ -4,7 +4,7 @@ class HashMap:
         self.value_type = value_type
         self.max_entries = max_entries
         self.entries = {}
-        
+
     def lookup(self, key):
         if key in self.entries:
             return self.entries[key]

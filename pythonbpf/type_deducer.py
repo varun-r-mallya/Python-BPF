@@ -1,6 +1,8 @@
 from llvmlite import ir
 
-#TODO: THIS IS NOT SUPPOSED TO MATCH STRINGS :skull:
+# TODO: THIS IS NOT SUPPOSED TO MATCH STRINGS :skull:
+
+
 def ctypes_to_ir(ctype: str):
     mapping = {
         "c_int8": ir.IntType(8),
