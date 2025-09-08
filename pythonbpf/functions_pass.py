@@ -56,9 +56,6 @@ def process_bpf_chunk(func_node, module, return_type):
 
     func_name = func_node.name
 
-    # TODO: The function actual arg retgurn type is parsed,
-    # but the actual output is not. It's still very wrong. Try uncommenting the
-    # code in execve2.py once
     ret_type = return_type
 
     # TODO: parse parameters

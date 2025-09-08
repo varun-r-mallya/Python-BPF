@@ -1,6 +1,7 @@
 from pythonbpf.decorators import bpf, bpfglobal, section
-from ctypes import c_void_p, c_int64, c_int32
+from ctypes import c_void_p, c_int64, c_int32, c_uint64
 from pythonbpf.helpers import bpf_ktime_get_ns
+from pythonbpf.maps import HashMap
 
 
 @bpf
