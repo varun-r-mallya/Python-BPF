@@ -21,7 +21,7 @@ def maps_proc(tree, module, chunks):
 
 
 def create_bpf_map(module, map_name, map_params):
-    """Create a BPF map in the module with the given parameters"""
+    """Create a BPF map in the module with the given parameters and debug info"""
 
     # Create the anonymous struct type for BPF map
     map_struct_type = ir.LiteralStructType([
@@ -35,16 +35,165 @@ def create_bpf_map(module, map_name, map_params):
     map_global = ir.GlobalVariable(module, map_struct_type, name=map_name)
     map_global.linkage = 'dso_local'
     map_global.global_constant = False
-
-    # Initialize with zeroinitializer (all null pointers)
-    map_global.initializer = ir.Constant(map_struct_type, None)  # type: ignore
-
+    map_global.initializer = ir.Constant(map_struct_type, None)     # type: ignore
     map_global.section = ".maps"
-    map_global.align = 8    # type: ignore
+    map_global.align = 8        # type: ignore
+
+    # Generate debug info for BTF
+    create_map_debug_info(module, map_global, map_name, map_params)
 
     print(f"Created BPF map: {map_name}")
     map_sym_tab[map_name] = map_global
     return map_global
+
+def create_map_debug_info(module, map_global, map_name, map_params):
+    """Generate debug information metadata for BPF map"""
+    file_metadata = module
+    # Get or create compile unit (you may already have this)
+    if not hasattr(module, '_debug_compile_unit'):
+        # Create file metadata
+        file_metadata = module.add_debug_info("DIFile", {
+            "filename": "generated.bpf.c",  # Adjust as needed
+            "directory": "/generated",      # Adjust as needed
+        })
+
+        # Create compile unit
+        module._debug_compile_unit = module.add_debug_info("DICompileUnit", {
+            "language": 12,  # DW_LANG_C11
+            "file": file_metadata,
+            "producer": "PythonBPF DSL Compiler",
+            "isOptimized": True,
+            "runtimeVersion": 0,
+            "emissionKind": 1,
+            "splitDebugInlining": False,
+            "nameTableKind": 0
+        }, is_distinct=True)
+
+        module.add_named_metadata("llvm.dbg.cu", module._debug_compile_unit)
+
+    compile_unit = module._debug_compile_unit
+
+    # Create basic type for unsigned int (32-bit)
+    uint_type = module.add_debug_info("DIBasicType", {
+        "name": "unsigned int",
+        "size": 32,
+        "encoding": 7
+    })
+
+    # Create basic type for unsigned long long (64-bit)
+    ulong_type = module.add_debug_info("DIBasicType", {
+        "name": "unsigned long long",
+        "size": 64,
+        "encoding": 7 # "DW_ATE_unsigned"
+    })
+
+    # Create array type for map type field (array of 1 unsigned int)
+    array_subrange = module.add_debug_info("DISubrange", {"count": 1})
+    array_type = module.add_debug_info("DICompositeType", {
+        "tag": 17,  # "DW_TAG_array_type"
+        "baseType": uint_type,
+        "size": 32,
+        "elements": [array_subrange]
+    })
+
+    # Create pointer types
+    type_ptr = module.add_debug_info("DIDerivedType", {
+        "tag": 15,  # DW_TAG_pointer_type
+        "baseType": array_type,
+        "size": 64
+    })
+
+    max_entries_ptr = module.add_debug_info("DIDerivedType", {
+        "tag": 15,  # DW_TAG_pointer_type
+        "baseType": array_type,
+        "size": 64
+    })
+
+    key_ptr = module.add_debug_info("DIDerivedType", {
+        "tag": 15,  # DW_TAG_pointer_type
+        "baseType": uint_type,  # Adjust based on actual key type
+        "size": 64
+    })
+
+    value_ptr = module.add_debug_info("DIDerivedType", {
+        "tag": 15,  # DW_TAG_pointer_type
+        "baseType": ulong_type,  # Adjust based on actual value type
+        "size": 64
+    })
+
+    # Create struct members
+    type_member = module.add_debug_info("DIDerivedType", {
+        "tag": 13,  # "DW_TAG_member"
+        "name": "type",
+        "file": file_metadata,  # Use the stored file metadata
+        "line": 7,  # You may want to track actual line numbers
+        "baseType": type_ptr,
+        "size": 64,
+        "offset": 0
+    })
+
+    max_entries_member = module.add_debug_info("DIDerivedType", {
+        "tag": 13,  # DW_TAG_member
+        "name": "max_entries",
+        "file": file_metadata,
+        "line": 8,
+        "baseType": max_entries_ptr,
+        "size": 64,
+        "offset": 64
+    })
+
+    key_member = module.add_debug_info("DIDerivedType", {
+        "tag": 13,  # DW_TAG_member
+        "name": "key",
+        "file": file_metadata,
+        "line": 9,
+        "baseType": key_ptr,
+        "size": 64,
+        "offset": 128
+    })
+
+    value_member = module.add_debug_info("DIDerivedType", {
+        "tag": 13,  # DW_TAG_member
+        "name": "value",
+        "file": file_metadata,
+        "line": 10,
+        "baseType": value_ptr,
+        "size": 64,
+        "offset": 192
+    })
+
+    # Create the struct type
+    struct_type = module.add_debug_info("DICompositeType", {
+        "tag": 19,  # DW_TAG_structure_type
+        "name": "anon",  # Anonymous struct
+        "file": file_metadata,
+        "line": 6,  # Adjust line number
+        "size": 256,  # 4 * 64-bit pointers
+        "align": 64,
+        "elements": [type_member, max_entries_member, key_member, value_member]
+    })
+
+    # Create global variable debug info
+    global_var = module.add_debug_info("DIGlobalVariable", {
+        "name": map_name,
+        "scope": compile_unit,
+        "file": file_metadata,
+        "line": 11,  # Adjust line number
+        "type": struct_type,
+        "isLocal": False,
+        "isDefinition": True
+    })
+
+    # Create global variable expression
+    global_var_expr = module.add_debug_info("DIGlobalVariableExpression", {
+        "var": global_var,
+        "expr": module.add_debug_info("DIExpression", {})
+    })
+
+    # Attach debug info to the global variable
+    map_global.set_metadata("dbg", global_var_expr)
+
+    return global_var_expr
 
 
 def process_hash_map(map_name, rval, module):
