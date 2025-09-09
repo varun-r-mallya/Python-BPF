@@ -5,7 +5,9 @@ from .functions_pass import func_proc
 from .maps_pass import maps_proc
 from .globals_pass import globals_processing
 import os
-
+import subprocess
+import pathlib
+import __main__
 
 def find_bpf_chunks(tree):
     """Find all functions decorated with @bpf in the AST."""
@@ -92,3 +94,18 @@ def compile_to_ir(filename: str, output: str):
         f.write("\n")
 
     return output
+
+def compile():
+    main_file = pathlib.Path(__main__.__file__).resolve()
+
+    ll_file = pathlib.Path("/tmp") / main_file.with_suffix(".ll").name
+    o_file = main_file.with_suffix(".o")
+
+    compile_to_ir(str(main_file), str(ll_file))
+
+    subprocess.run([
+        "llc", "-march=bpf", "-filetype=obj", "-O2",
+        str(ll_file), "-o", str(o_file)
+    ], check=True)
+
+    print(f"Object written to {o_file}")
