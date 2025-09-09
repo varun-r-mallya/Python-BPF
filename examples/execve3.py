@@ -32,8 +32,7 @@ def hello_again(ctx: c_void_p) -> c_int64:
 #        last().delete(key)
     if True:
         print("we prevailed")
-#    ts = ktime()
-    ktime()
+    ts = ktime()
 #    last().update(key, ts)
     return c_int64(0)
 

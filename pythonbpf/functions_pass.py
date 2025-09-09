@@ -39,10 +39,11 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     if isinstance(rval, ast.Constant):
         if isinstance(rval.value, int):
             # Assume c_int64 for now
-            var = builder.alloca(ir.IntType(64), name=var_name)
-            var.align = 8
-            builder.store(ir.Constant(ir.IntType(64), rval.value), var)
-            local_sym_tab[var_name] = var
+            # var = builder.alloca(ir.IntType(64), name=var_name)
+            # var.align = 8
+            builder.store(ir.Constant(ir.IntType(64), rval.value),
+                          local_sym_tab[var_name])
+            # local_sym_tab[var_name] = var
             print(f"Assigned constant {rval.value} to {var_name}")
     elif isinstance(rval, ast.Call):
         if isinstance(rval.func, ast.Name):
@@ -50,19 +51,20 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
             print(f"Assignment call type: {call_type}")
             if call_type in num_types and len(rval.args) == 1 and isinstance(rval.args[0], ast.Constant) and isinstance(rval.args[0].value, int):
                 ir_type = ctypes_to_ir(call_type)
-                var = builder.alloca(ir_type, name=var_name)
-                var.align = ir_type.width // 8
-                builder.store(ir.Constant(ir_type, rval.args[0].value), var)
+                # var = builder.alloca(ir_type, name=var_name)
+                # var.align = ir_type.width // 8
+                builder.store(ir.Constant(
+                    ir_type, rval.args[0].value), local_sym_tab[var_name])
                 print(f"Assigned {call_type} constant "
                       f"{rval.args[0].value} to {var_name}")
-                local_sym_tab[var_name] = var
+                # local_sym_tab[var_name] = var
             elif call_type in helper_func_list:
-                var = builder.alloca(ir.IntType(64), name=var_name)
-                var.align = 8
+                # var = builder.alloca(ir.IntType(64), name=var_name)
+                # var.align = 8
                 val = handle_helper_call(
                     rval, module, builder, None, local_sym_tab, map_sym_tab)
-                builder.store(val, var)
-                local_sym_tab[var_name] = var
+                builder.store(val, local_sym_tab[var_name])
+                # local_sym_tab[var_name] = var
                 print(f"Assigned constant {rval.func.id} to {var_name}")
             else:
                 print(f"Unsupported assignment call type: {call_type}")
@@ -73,8 +75,12 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
                 if map_name in map_sym_tab:
                     map_ptr = map_sym_tab[map_name]
                     if method_name in helper_func_list:
-                        handle_helper_call(
+                        val = handle_helper_call(
                             rval, module, builder, func, local_sym_tab, map_sym_tab)
+                        # var = builder.alloca(ir.IntType(64), name=var_name)
+                        # var.align = 8
+                        builder.store(val, local_sym_tab[var_name])
+                        # local_sym_tab[var_name] = var
             else:
                 print("Unsupported assignment call structure")
         else:
@@ -187,6 +193,61 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
     did_return = False
 
     local_sym_tab = {}
+
+    # pre-allocate dynamic variables
+    for stmt in func_node.body:
+        if isinstance(stmt, ast.Assign):
+            if len(stmt.targets) != 1:
+                print("Unsupported multiassignment")
+                continue
+            target = stmt.targets[0]
+            if not isinstance(target, ast.Name):
+                print("Unsupported assignment target")
+                continue
+            var_name = target.id
+            rval = stmt.value
+            if isinstance(rval, ast.Call):
+                if isinstance(rval.func, ast.Name):
+                    call_type = rval.func.id
+                    if call_type in ("c_int32", "c_int64", "c_uint32", "c_uint64"):
+                        ir_type = ctypes_to_ir(call_type)
+                        var = builder.alloca(ir_type, name=var_name)
+                        var.align = ir_type.width // 8
+                        print(
+                            f"Pre-allocated variable {var_name} of type {call_type}")
+                    elif call_type in helper_func_list:
+                        # Assume return type is int64 for now
+                        ir_type = ir.IntType(64)
+                        var = builder.alloca(ir_type, name=var_name)
+                        var.align = ir_type.width // 8
+                        print(
+                            f"Pre-allocated variable {var_name} for helper")
+                elif isinstance(rval.func, ast.Attribute):
+                    ir_type = ir.PointerType(ir.IntType(64))
+                    var = builder.alloca(ir_type, name=var_name)
+                    # var.align = ir_type.width // 8
+                    print(
+                        f"Pre-allocated variable {var_name} for map")
+                else:
+                    print("Unsupported assignment call function type")
+                    continue
+            elif isinstance(rval, ast.Constant):
+                if isinstance(rval.value, int):
+                    # Assume c_int64 for now
+                    ir_type = ir.IntType(64)
+                    var = builder.alloca(ir_type, name=var_name)
+                    var.align = ir_type.width // 8
+                    print(
+                        f"Pre-allocated variable {var_name} of type c_int64")
+                else:
+                    print("Unsupported constant type")
+                    continue
+            else:
+                print("Unsupported assignment value type")
+                continue
+            local_sym_tab[var_name] = var
+
+    print(f"Local symbol table: {local_sym_tab.keys()}")
 
     for stmt in func_node.body:
         did_return = process_stmt(func, module, builder, stmt, local_sym_tab,
