@@ -90,7 +90,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     # Create array type for map type field (array of 1 unsigned int)
     array_subrange = module.add_debug_info("DISubrange", {"count": 1})
     array_type = module.add_debug_info("DICompositeType", {
-        "tag": 17,  # "DW_TAG_array_type"
+        "tag": 1,  # "DW_TAG_array_type"
         "baseType": uint_type,
         "size": 32,
         "elements": [array_subrange]
@@ -122,6 +122,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     })
 
     # Create struct members
+    # scope field does not appear for some reason
     type_member = module.add_debug_info("DIDerivedType", {
         "tag": 13,  # "DW_TAG_member"
         "name": "type",
@@ -161,12 +162,10 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     # Create the struct type
     struct_type = module.add_debug_info("DICompositeType", {
         "tag": 19,  # DW_TAG_structure_type
-        "name": "anon",  # Anonymous struct
         "file": file_metadata,
         "size": 256,  # 4 * 64-bit pointers
-        "align": 64,
         "elements": [type_member, max_entries_member, key_member, value_member]
-    })
+    }, is_distinct=True)
 
     # Create global variable debug info
     global_var = module.add_debug_info("DIGlobalVariable", {
@@ -176,7 +175,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "type": struct_type,
         "isLocal": False,
         "isDefinition": True
-    })
+    }, is_distinct=True)
 
     # Create global variable expression
     global_var_expr = module.add_debug_info("DIGlobalVariableExpression", {
