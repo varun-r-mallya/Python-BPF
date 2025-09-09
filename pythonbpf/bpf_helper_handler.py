@@ -107,7 +107,7 @@ def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_
         func_name = call.func.id
         if func_name in helper_func_list:
             # it is not a map method call
-            helper_func_list[func_name](call, module, builder, func)
+            return helper_func_list[func_name](call, module, builder, func)
         else:
             raise NotImplementedError(
                 f"Function {func_name} is not implemented as a helper function.")
@@ -119,7 +119,7 @@ def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_
             if map_sym_tab and map_name in map_sym_tab:
                 map_ptr = map_sym_tab[map_name]
                 if method_name in helper_func_list:
-                    helper_func_list[method_name](
+                    return helper_func_list[method_name](
                         call, map_ptr, module, builder, local_sym_tab)
                 else:
                     raise NotImplementedError(

@@ -39,7 +39,6 @@ def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
     if isinstance(rval, ast.Constant):
         if isinstance(rval.value, int):
             # Assume c_int64 for now
-            # TODO: make symtab for this
             var = builder.alloca(ir.IntType(64), name=var_name)
             var.align = 8
             builder.store(ir.Constant(ir.IntType(64), rval.value), var)
@@ -57,6 +56,14 @@ def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
                 print(f"Assigned {call_type} constant "
                       f"{rval.args[0].value} to {var_name}")
                 local_sym_tab[var_name] = var
+            elif call_type in helper_func_list:
+                var = builder.alloca(ir.IntType(64), name=var_name)
+                var.align = 8
+                val = handle_helper_call(
+                    rval, module, builder, None, local_sym_tab, map_sym_tab)
+                builder.store(val, var)
+                local_sym_tab[var_name] = var
+                print(f"Assigned constant {rval.func.id} to {var_name}")
             else:
                 print(f"Unsupported assignment call type: {call_type}")
         elif isinstance(rval.func, ast.Attribute):
@@ -70,6 +77,8 @@ def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
                             rval, module, builder, None, local_sym_tab, map_sym_tab)
             else:
                 print("Unsupported assignment call structure")
+        else:
+            print("Unsupported assignment call function type")
 
 
 def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):

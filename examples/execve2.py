@@ -25,7 +25,7 @@ def hello_again(ctx: c_void_p) -> c_int64:
     key = 0
     tsp = last().lookup(key)
     print(tsp)
-    ktime()
+    ts = ktime()
     return c_int64(0)
 
 
