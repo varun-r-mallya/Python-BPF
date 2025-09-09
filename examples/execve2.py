@@ -9,7 +9,6 @@ from pythonbpf.maps import HashMap
 def last() -> HashMap:
     return HashMap(key_type=c_uint64, value_type=c_uint64, max_entries=1)
 
-
 @bpf
 @section("tracepoint/syscalls/sys_enter_execve")
 def hello(ctx: c_void_p) -> c_int32:

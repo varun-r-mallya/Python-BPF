@@ -1,6 +1,7 @@
 import ast
 from llvmlite import ir
 from .type_deducer import ctypes_to_ir
+from . import dwarf_constants as dc
 
 map_sym_tab = {}
 
@@ -55,20 +56,20 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     uint_type = module.add_debug_info("DIBasicType", {
         "name": "unsigned int",
         "size": 32,
-        "encoding": 7
+        "encoding": dc.DW_ATE_unsigned
     })
 
     # Create basic type for unsigned long long (64-bit)
     ulong_type = module.add_debug_info("DIBasicType", {
         "name": "unsigned long long",
         "size": 64,
-        "encoding": 7 # "DW_ATE_unsigned"
+        "encoding": dc.DW_ATE_unsigned
     })
 
     # Create array type for map type field (array of 1 unsigned int)
     array_subrange = module.add_debug_info("DISubrange", {"count": 1})
     array_type = module.add_debug_info("DICompositeType", {
-        "tag": 1,  # "DW_TAG_array_type"
+        "tag": dc.DW_TAG_array_type,
         "baseType": uint_type,
         "size": 32,
         "elements": [array_subrange]
@@ -76,25 +77,25 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
     # Create pointer types
     type_ptr = module.add_debug_info("DIDerivedType", {
-        "tag": 15,  # DW_TAG_pointer_type
+        "tag": dc.DW_TAG_pointer_type,
         "baseType": array_type,
         "size": 64
     })
 
     max_entries_ptr = module.add_debug_info("DIDerivedType", {
-        "tag": 15,  # DW_TAG_pointer_type
+        "tag": dc.DW_TAG_pointer_type,
         "baseType": array_type,
         "size": 64
     })
 
     key_ptr = module.add_debug_info("DIDerivedType", {
-        "tag": 15,  # DW_TAG_pointer_type
+        "tag": dc.DW_TAG_pointer_type,
         "baseType": uint_type,  # Adjust based on actual key type
         "size": 64
     })
 
     value_ptr = module.add_debug_info("DIDerivedType", {
-        "tag": 15,  # DW_TAG_pointer_type
+        "tag": dc.DW_TAG_pointer_type,
         "baseType": ulong_type,  # Adjust based on actual value type
         "size": 64
     })
@@ -102,7 +103,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     # Create struct members
     # scope field does not appear for some reason
     type_member = module.add_debug_info("DIDerivedType", {
-        "tag": 13,  # "DW_TAG_member"
+        "tag": dc.DW_TAG_member,
         "name": "type",
         "file": file_metadata,  # Use the stored file metadata
         "baseType": type_ptr,
@@ -111,7 +112,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     })
 
     max_entries_member = module.add_debug_info("DIDerivedType", {
-        "tag": 13,  # DW_TAG_member
+        "tag": dc.DW_TAG_member,
         "name": "max_entries",
         "file": file_metadata,
         "baseType": max_entries_ptr,
@@ -120,7 +121,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     })
 
     key_member = module.add_debug_info("DIDerivedType", {
-        "tag": 13,  # DW_TAG_member
+        "tag": dc.DW_TAG_member,
         "name": "key",
         "file": file_metadata,
         "baseType": key_ptr,
@@ -129,7 +130,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     })
 
     value_member = module.add_debug_info("DIDerivedType", {
-        "tag": 13,  # DW_TAG_member
+        "tag": dc.DW_TAG_member,
         "name": "value",
         "file": file_metadata,
         "baseType": value_ptr,
@@ -139,7 +140,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
     # Create the struct type
     struct_type = module.add_debug_info("DICompositeType", {
-        "tag": 19,  # DW_TAG_structure_type
+        "tag": dc.DW_TAG_structure_type,
         "file": file_metadata,
         "size": 256,  # 4 * 64-bit pointers
         "elements": [type_member, max_entries_member, key_member, value_member]
