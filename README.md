@@ -13,25 +13,25 @@ This is an LLVM IR generator for eBPF programs in Python. We use llvmlite to gen
 ## Usage
 ```python
 # pythonbpf_example.py
-import pythonbpf as pb
+from pythonbpf import bpf, map, bpfglobal, section, compile
 from pythonbpf.helpers import bpf_ktime_get_ns
 from pythonbpf.maps import HashMap
 
 from ctypes import c_void_p, c_int64, c_int32, c_uint64
 
-@pb.bpf
-@pb.map
+@bpf
+@map
 def last() -> HashMap:
     return HashMap(key_type=c_uint64, value_type=c_uint64, max_entries=1)
 
-@pb.bpf
-@pb.section("tracepoint/syscalls/sys_enter_execve")
+@bpf
+@section("tracepoint/syscalls/sys_enter_execve")
 def hello(ctx: c_void_p) -> c_int32:
     print("entered")
     return c_int32(0)
 
-@pb.bpf
-@pb.section("tracepoint/syscalls/sys_exit_execve")
+@bpf
+@section("tracepoint/syscalls/sys_exit_execve")
 def hello_again(ctx: c_void_p) -> c_int64:
     print("exited")
     key = 0
@@ -40,8 +40,8 @@ def hello_again(ctx: c_void_p) -> c_int64:
     ts = bpf_ktime_get_ns()
     return c_int64(0)
 
-@pb.bpf
-@pb.bpfglobal
+@bpf
+@bpfglobal
 def LICENSE() -> str:
     return "GPL"
 
@@ -49,7 +49,7 @@ def some_normal_function():
     print("normal function")
 
 # compiles and dumps object file in the same directory
-pb.compile()
+compile()
 ```
 - Run `python pythonbpf_example.py` to get the compiled object file that can be then loaded into the kernel.
 

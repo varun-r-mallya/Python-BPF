@@ -1,25 +1,25 @@
-import pythonbpf as pb
+from pythonbpf import bpf, map, section, bpfglobal, compile
 from pythonbpf.helpers import bpf_ktime_get_ns
 from pythonbpf.maps import HashMap
 
 from ctypes import c_void_p, c_int64, c_int32, c_uint64
 
-@pb.bpf
-@pb.map
+@bpf
+@map
 def last() -> HashMap:
     return HashMap(key_type=c_uint64, value_type=c_uint64, max_entries=1)
 
 
-@pb.bpf
-@pb.section("tracepoint/syscalls/sys_enter_execve")
+@bpf
+@section("tracepoint/syscalls/sys_enter_execve")
 def hello(ctx: c_void_p) -> c_int32:
     print("entered")
     print("multi constant support")
     return c_int32(0)
 
 
-@pb.bpf
-@pb.section("tracepoint/syscalls/sys_exit_execve")
+@bpf
+@section("tracepoint/syscalls/sys_exit_execve")
 def hello_again(ctx: c_void_p) -> c_int64:
     print("exited")
     key = 0
@@ -34,9 +34,9 @@ def hello_again(ctx: c_void_p) -> c_int64:
     return c_int64(0)
 
 
-@pb.bpf
-@pb.bpfglobal
+@bpf
+@bpfglobal
 def LICENSE() -> str:
     return "GPL"
 
-pb.compile()
+compile()
