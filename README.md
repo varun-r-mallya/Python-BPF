@@ -1,5 +1,14 @@
 # Python-BPF
-This is an LLVM IR generator for eBPF programs in Python. We use `llvmlite` to generate LLVM IR code from pure Python code. This is then compiled to LLVM object files, which can be loaded into the kernel for execution.
+<p align="center">
+<a href="https://www.python.org/downloads/release/python-3080/"><img src="https://img.shields.io/badge/python-3.8-blue.svg"></a>
+<a href="https://pypi.org/project/pythonbpf"><img src="https://badge.fury.io/py/pythonbpf.svg"></a>
+</p>
+
+This is an LLVM IR generator for eBPF programs in Python. We use llvmlite to generate LLVM IR from pure Python. This is then compiled to LLVM object files, which can be loaded into the kernel for execution. We do not rely on BCC to do our compilation.
+
+#  Installation
+- Have `clang` installed.
+- `pip install pythonbpf`
 
 ## Development
 Step 0. Make a virtual environment and activate it using `python3 -m venv .venv && source .venv/bin/activate`.  
