@@ -126,7 +126,6 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "tag": 13,  # "DW_TAG_member"
         "name": "type",
         "file": file_metadata,  # Use the stored file metadata
-        "line": 7,  # You may want to track actual line numbers
         "baseType": type_ptr,
         "size": 64,
         "offset": 0
@@ -136,7 +135,6 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "tag": 13,  # DW_TAG_member
         "name": "max_entries",
         "file": file_metadata,
-        "line": 8,
         "baseType": max_entries_ptr,
         "size": 64,
         "offset": 64
@@ -146,7 +144,6 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "tag": 13,  # DW_TAG_member
         "name": "key",
         "file": file_metadata,
-        "line": 9,
         "baseType": key_ptr,
         "size": 64,
         "offset": 128
@@ -156,7 +153,6 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "tag": 13,  # DW_TAG_member
         "name": "value",
         "file": file_metadata,
-        "line": 10,
         "baseType": value_ptr,
         "size": 64,
         "offset": 192
@@ -167,7 +163,6 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "tag": 19,  # DW_TAG_structure_type
         "name": "anon",  # Anonymous struct
         "file": file_metadata,
-        "line": 6,  # Adjust line number
         "size": 256,  # 4 * 64-bit pointers
         "align": 64,
         "elements": [type_member, max_entries_member, key_member, value_member]
@@ -178,7 +173,6 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "name": map_name,
         "scope": compile_unit,
         "file": file_metadata,
-        "line": 11,  # Adjust line number
         "type": struct_type,
         "isLocal": False,
         "isDefinition": True
