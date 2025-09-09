@@ -81,6 +81,19 @@ def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
             print("Unsupported assignment call function type")
 
 
+def handle_expr(module, builder, expr, local_sym_tab, map_sym_tab):
+    """Handle expression statements in the function body."""
+    call = expr.value
+    if isinstance(call, ast.Call):
+        if isinstance(call.func, ast.Name):
+            # check for helpers first
+            if call.func.id in helper_func_list:
+                handle_helper_call(
+                    call, module, builder, None, local_sym_tab, map_sym_tab)
+                return
+    print("Unsupported expression statement")
+
+
 def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
     """Process the body of a bpf function"""
     # TODO: A lot.  We just have print -> bpf_trace_printk for now
@@ -89,13 +102,8 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
     local_sym_tab = {}
 
     for stmt in func_node.body:
-        if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
-            call = stmt.value
-            if isinstance(call.func, ast.Name):
-                # check for helpers first
-                if call.func.id in helper_func_list:
-                    handle_helper_call(
-                        call, module, builder, func, local_sym_tab, map_sym_tab)
+        if isinstance(stmt, ast.Expr):
+            handle_expr(module, builder, stmt, local_sym_tab, map_sym_tab)
         elif isinstance(stmt, ast.Assign):
             handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab)
         elif isinstance(stmt, ast.Return):
