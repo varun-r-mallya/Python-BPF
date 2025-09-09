@@ -10,5 +10,15 @@ class HashMap:
             return self.entries[key]
         else:
             return None
-
-    # add other supported map functions here
+            
+    def delete(self, key):
+        if key in self.entries:
+            del self.entries[key]
+        else:
+            raise KeyError(f"Key {key} not found in map")
+            
+    def update(self, key, value):
+        if key in self.entries:
+            self.entries[key] = value
+        else:
+            raise KeyError(f"Key {key} not found in map")
