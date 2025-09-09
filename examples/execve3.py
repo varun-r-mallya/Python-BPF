@@ -1,8 +1,9 @@
 from pythonbpf import bpf, map, section, bpfglobal, compile
-from pythonbpf.helpers import bpf_ktime_get_ns
+from pythonbpf.helpers import ktime
 from pythonbpf.maps import HashMap
 
 from ctypes import c_void_p, c_int64, c_int32, c_uint64
+
 
 @bpf
 @map
@@ -24,13 +25,16 @@ def hello_again(ctx: c_void_p) -> c_int64:
     print("exited")
     key = 0
     tsp = last().lookup(key)
-    if tsp:
-        delta = (bpf_ktime_get_ns() - tsp.value)
-        if delta < 1000000000:
-            print("execve called within last second")
-        last().delete(key)
-    ts = bpf_ktime_get_ns()
-    last().update(key, ts)
+#    if tsp:
+#        delta = (bpf_ktime_get_ns() - tsp.value)
+#        if delta < 1000000000:
+#            print("execve called within last second")
+#        last().delete(key)
+    if True:
+        print("we prevailed")
+#    ts = ktime()
+    ktime()
+#    last().update(key, ts)
     return c_int64(0)
 
 
@@ -38,5 +42,6 @@ def hello_again(ctx: c_void_p) -> c_int64:
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
+
 
 compile()

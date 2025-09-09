@@ -22,7 +22,7 @@ def get_probe_string(func_node):
     return "helper"
 
 
-def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
+def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     """Handle assignment statements in the function body."""
     if len(stmt.targets) != 1:
         print("Unsupported multiassignment")
@@ -74,46 +74,111 @@ def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
                     map_ptr = map_sym_tab[map_name]
                     if method_name in helper_func_list:
                         handle_helper_call(
-                            rval, module, builder, None, local_sym_tab, map_sym_tab)
+                            rval, module, builder, func, local_sym_tab, map_sym_tab)
             else:
                 print("Unsupported assignment call structure")
         else:
             print("Unsupported assignment call function type")
 
 
-def handle_if_statement(module, builder, stmt, map_sym_tab, local_sym_tab):
-    pass
-
-
-def handle_expr(module, builder, expr, local_sym_tab, map_sym_tab):
+def handle_expr(func, module, builder, expr, local_sym_tab, map_sym_tab):
     """Handle expression statements in the function body."""
     call = expr.value
+    print(f"Handling expression: {ast.dump(call)}")
     if isinstance(call, ast.Call):
         if isinstance(call.func, ast.Name):
             # check for helpers first
             if call.func.id in helper_func_list:
                 handle_helper_call(
-                    call, module, builder, None, local_sym_tab, map_sym_tab)
+                    call, module, builder, func, local_sym_tab, map_sym_tab)
                 return
-    print("Unsupported expression statement")
+    elif isinstance(call, ast.Name):
+        if call.id in local_sym_tab:
+            var = local_sym_tab[call.id]
+            val = builder.load(var)
+            return val
+        else:
+            print(f"Undefined variable {call.id}")
+            return None
+    elif isinstance(call, ast.Constant):
+        if isinstance(call.value, int):
+            return ir.Constant(ir.IntType(64), call.value)
+        elif isinstance(call.value, bool):
+            return ir.Constant(ir.IntType(1), int(call.value))
+        else:
+            print("Unsupported constant type")
+            return None
+    else:
+        print("Unsupported expression statement")
 
 
-def handle_if(module, builder, stmt, map_sym_tab, local_sym_tab):
+def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
+    if isinstance(cond, ast.Constant):
+        if isinstance(cond.value, bool):
+            return ir.Constant(ir.IntType(1), int(cond.value))
+        elif isinstance(cond.value, int):
+            return ir.Constant(ir.IntType(1), int(bool(cond.value)))
+        else:
+            print("Unsupported constant type in condition")
+            return None
+    elif isinstance(cond, ast.Name):
+        if cond.id in local_sym_tab:
+            var = local_sym_tab[cond.id]
+            val = builder.load(var)
+            return val
+        else:
+            print(f"Undefined variable {cond.id} in condition")
+            return None
+    else:
+        print("Unsupported condition expression")
+        return None
+
+
+def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     """Handle if statements in the function body."""
-    func = builder.block.parent
+    print("Handling if statement")
+    start = builder.block.parent
     then_block = func.append_basic_block(name="if.then")
     merge_block = func.append_basic_block(name="if.end")
 
-    cond = stmt.test
+    cond = handle_cond(func, module, builder, stmt.test,
+                       local_sym_tab, map_sym_tab)
 
     builder.cbranch(cond, then_block, merge_block)
     builder.position_at_end(then_block)
     for s in stmt.body:
-        pass
+        process_stmt(func, module, builder, s,
+                     local_sym_tab, map_sym_tab, False)
     if not builder.block.is_terminated:
         builder.branch(merge_block)
 
     builder.position_at_end(merge_block)
+
+
+def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, did_return, ret_type=ir.IntType(64)):
+    print(f"Processing statement: {ast.dump(stmt)}")
+    if isinstance(stmt, ast.Expr):
+        handle_expr(func, module, builder, stmt, local_sym_tab, map_sym_tab)
+    elif isinstance(stmt, ast.Assign):
+        handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab)
+    elif isinstance(stmt, ast.If):
+        handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab)
+    elif isinstance(stmt, ast.Return):
+        if stmt.value is None:
+            builder.ret(ir.Constant(ir.IntType(32), 0))
+            did_return = True
+        elif isinstance(stmt.value, ast.Call) and isinstance(stmt.value.func, ast.Name) and len(stmt.value.args) == 1 and isinstance(stmt.value.args[0], ast.Constant) and isinstance(stmt.value.args[0].value, int):
+            call_type = stmt.value.func.id
+            if ctypes_to_ir(call_type) != ret_type:
+                raise ValueError("Return type mismatch: expected"
+                                 f"{ctypes_to_ir(call_type)}, got {call_type}")
+            else:
+                builder.ret(ir.Constant(
+                    ret_type, stmt.value.args[0].value))
+                did_return = True
+        else:
+            print("Unsupported return value")
+    return did_return
 
 
 def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
@@ -124,27 +189,9 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
     local_sym_tab = {}
 
     for stmt in func_node.body:
-        if isinstance(stmt, ast.Expr):
-            handle_expr(module, builder, stmt, local_sym_tab, map_sym_tab)
-        elif isinstance(stmt, ast.Assign):
-            handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab)
-        elif isinstance(stmt, ast.If):
-            handle_if(module, builder, stmt, map_sym_tab, local_sym_tab)
-        elif isinstance(stmt, ast.Return):
-            if stmt.value is None:
-                builder.ret(ir.Constant(ir.IntType(32), 0))
-                did_return = True
-            elif isinstance(stmt.value, ast.Call) and isinstance(stmt.value.func, ast.Name) and len(stmt.value.args) == 1 and isinstance(stmt.value.args[0], ast.Constant) and isinstance(stmt.value.args[0].value, int):
-                call_type = stmt.value.func.id
-                if ctypes_to_ir(call_type) != ret_type:
-                    raise ValueError("Return type mismatch: expected"
-                                     f"{ctypes_to_ir(call_type)}, got {call_type}")
-                else:
-                    builder.ret(ir.Constant(
-                        ret_type, stmt.value.args[0].value))
-                    did_return = True
-            else:
-                print("Unsupported return value")
+        did_return = process_stmt(func, module, builder, stmt, local_sym_tab,
+                                  map_sym_tab, did_return, ret_type)
+
     if not did_return:
         builder.ret(ir.Constant(ir.IntType(32), 0))
 

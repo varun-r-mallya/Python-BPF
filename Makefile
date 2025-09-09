@@ -1,6 +1,6 @@
 compile:
 	chmod +x ./tools/compile.py
-	./tools/compile.py ./examples/execve2.py
+	./tools/compile.py ./examples/execve3.py
 
 install: 
 	pip install -e .
