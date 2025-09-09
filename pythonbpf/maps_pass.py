@@ -48,29 +48,7 @@ def create_bpf_map(module, map_name, map_params):
 
 def create_map_debug_info(module, map_global, map_name, map_params):
     """Generate debug information metadata for BPF map"""
-    file_metadata = module
-    # Get or create compile unit (you may already have this)
-    if not hasattr(module, '_debug_compile_unit'):
-        # Create file metadata
-        file_metadata = module.add_debug_info("DIFile", {
-            "filename": "generated.bpf.c",  # Adjust as needed
-            "directory": "/generated",      # Adjust as needed
-        })
-
-        # Create compile unit
-        module._debug_compile_unit = module.add_debug_info("DICompileUnit", {
-            "language": 12,  # DW_LANG_C11
-            "file": file_metadata,
-            "producer": "PythonBPF DSL Compiler",
-            "isOptimized": True,
-            "runtimeVersion": 0,
-            "emissionKind": 1,
-            "splitDebugInlining": False,
-            "nameTableKind": 0
-        }, is_distinct=True)
-
-        module.add_named_metadata("llvm.dbg.cu", module._debug_compile_unit)
-
+    file_metadata = module._file_metadata
     compile_unit = module._debug_compile_unit
 
     # Create basic type for unsigned int (32-bit)

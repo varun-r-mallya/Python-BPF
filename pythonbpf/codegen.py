@@ -4,6 +4,7 @@ from .license_pass import license_processing
 from .functions_pass import func_proc
 from .maps_pass import maps_proc
 from .globals_pass import globals_processing
+import os
 
 
 def find_bpf_chunks(tree):
@@ -41,7 +42,27 @@ def compile_to_ir(filename: str, output: str):
     module.data_layout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
     module.triple = "bpf"
 
+    if not hasattr(module, '_debug_compile_unit'):
+        module._file_metadata = module.add_debug_info("DIFile", {       # type: ignore
+            "filename": filename,
+            "directory": os.path.dirname(filename)
+        })
+        
+        module._debug_compile_unit = module.add_debug_info("DICompileUnit", {       # type: ignore
+            "language": 29,  # DW_LANG_C11
+            "file": module._file_metadata,      # type: ignore
+            "producer": "PythonBPF DSL Compiler",
+            "isOptimized": True,
+            "runtimeVersion": 0,
+            "emissionKind": 1,
+            "splitDebugInlining": False,
+            "nameTableKind": 0
+        }, is_distinct=True)
+
+        module.add_named_metadata("llvm.dbg.cu", module._debug_compile_unit)        # type: ignore
+
     processor(source, filename, module)
+
     wchar_size = module.add_metadata([ir.Constant(ir.IntType(32), 1),
                                       "wchar_size",
                                       ir.Constant(ir.IntType(32), 4)])
