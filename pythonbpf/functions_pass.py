@@ -1,7 +1,7 @@
 from llvmlite import ir
 import ast
 
-from .bpf_helper_handler import bpf_printk_emitter, bpf_ktime_get_ns_emitter, bpf_map_lookup_elem_emitter
+from .bpf_helper_handler import helper_func_list, handle_helper_call
 from .type_deducer import ctypes_to_ir
 
 
@@ -60,55 +60,16 @@ def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
             else:
                 print(f"Unsupported assignment call type: {call_type}")
         elif isinstance(rval.func, ast.Attribute):
-            if isinstance(rval.func.attr, str) and rval.func.attr == "lookup":
-                # Get map name and check symtab
-                # maps are called as funcs
-                if isinstance(rval.func.value, ast.Call) and isinstance(rval.func.value.func, ast.Name):
-                    map_name = rval.func.value.func.id
-                    if map_name in map_sym_tab:
-                        map_global = map_sym_tab[map_name]
-                        print(f"Found map {map_name} in symtab for lookup")
-                        if len(rval.args) != 1:
-                            print("Unsupported lookup with != 1 arg")
-                            return
-                        key_arg = rval.args[0]
-                        print(f"Lookup key arg type: {type(key_arg)}")
-                        # TODO: implement a parse_arg ffs as this can be a fucking expr
-                        if isinstance(key_arg, ast.Constant) and isinstance(key_arg.value, int):
-                            key_val = key_arg.value
-                            key_type = ir.IntType(64)
-                            print(f"Key type: {key_type}")
-                            print(f"Key val: {key_val}")
-                            key_var = builder.alloca(key_type)
-                            key_var.align = key_type // 8
-                            builder.store(ir.Constant(
-                                key_type, key_val), key_var)
-                        elif isinstance(key_arg, ast.Name):
-                            # Check in local symtab first
-                            if key_arg.id in local_sym_tab:
-                                key_var = local_sym_tab[key_arg.id]
-                                key_type = key_var.type.pointee
-                            elif key_arg.id in map_sym_tab:
-                                key_var = map_sym_tab[key_arg.id]
-                                key_type = key_var.type.pointee
-                            else:
-                                print("Key variable "
-                                      f"{key_arg.id} not found in symtabs")
-                                return
-                            print(f"Found key variable {key_arg.id} in symtab")
-                            print(f"Key type: {key_type}")
-                        else:
-                            print("Unsupported lookup key arg")
-                            return
-
-                        # TODO: generate call to bpf_map_lookup_elem
-                        result_ptr = bpf_map_lookup_elem_emitter(
-                            map_global, key_var, module, builder)
-
-                    else:
-                        print(f"Map {map_name} not found in symbol table")
+            if isinstance(rval.func.value, ast.Call) and isinstance(rval.func.value.func, ast.Name):
+                map_name = rval.func.value.func.id
+                method_name = rval.func.attr
+                if map_name in map_sym_tab:
+                    map_ptr = map_sym_tab[map_name]
+                    if method_name in helper_func_list:
+                        handle_helper_call(
+                            rval, module, builder, None, local_sym_tab, map_sym_tab)
             else:
-                print("Unsupported assignment from method call")
+                print("Unsupported assignment call structure")
 
 
 def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
@@ -121,10 +82,11 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
     for stmt in func_node.body:
         if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
             call = stmt.value
-            if isinstance(call.func, ast.Name) and call.func.id == "print":
-                bpf_printk_emitter(call, module, builder, func)
-            if isinstance(call.func, ast.Name) and call.func.id == "ktime":
-                bpf_ktime_get_ns_emitter(call, module, builder, func)
+            if isinstance(call.func, ast.Name):
+                # check for helpers first
+                if call.func.id in helper_func_list:
+                    handle_helper_call(
+                        call, module, builder, func, local_sym_tab, map_sym_tab)
         elif isinstance(stmt, ast.Assign):
             handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab)
         elif isinstance(stmt, ast.Return):
