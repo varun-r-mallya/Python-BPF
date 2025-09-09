@@ -123,7 +123,7 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
             call = stmt.value
             if isinstance(call.func, ast.Name) and call.func.id == "print":
                 bpf_printk_emitter(call, module, builder, func)
-            if isinstance(call.func, ast.Name) and call.func.id == "bpf_ktime_get_ns":
+            if isinstance(call.func, ast.Name) and call.func.id == "ktime":
                 bpf_ktime_get_ns_emitter(call, module, builder, func)
         elif isinstance(stmt, ast.Assign):
             handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab)

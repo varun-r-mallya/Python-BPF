@@ -33,7 +33,7 @@ long hello_again(void *ctx) {
         u64 delta = bpf_ktime_get_ns() - *tsp;
         if (delta < 1000000000) {
             // output if time is less than 1 second
-            bpf_trace_printk("%d\\n", delta / 1000000);
+            bpf_printk("execve called within last second");
         }
         bpf_map_delete_elem(&last, &key);
     }

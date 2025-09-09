@@ -1,6 +1,6 @@
 from pythonbpf.decorators import bpf, map, section, bpfglobal
 from ctypes import c_void_p, c_int64, c_int32, c_uint64
-from pythonbpf.helpers import bpf_ktime_get_ns
+from pythonbpf.helpers import ktime
 from pythonbpf.maps import HashMap
 
 
@@ -8,6 +8,7 @@ from pythonbpf.maps import HashMap
 @map
 def last() -> HashMap:
     return HashMap(key_type=c_uint64, value_type=c_uint64, max_entries=1)
+
 
 @bpf
 @section("tracepoint/syscalls/sys_enter_execve")
@@ -24,8 +25,9 @@ def hello_again(ctx: c_void_p) -> c_int64:
     key = 0
     tsp = last().lookup(key)
     print(tsp)
-    ts = bpf_ktime_get_ns()
+    ktime()
     return c_int64(0)
+
 
 @bpf
 @bpfglobal

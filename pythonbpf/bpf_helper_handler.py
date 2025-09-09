@@ -3,7 +3,15 @@ from llvmlite import ir
 
 
 def bpf_ktime_get_ns_emitter(call, module, builder, func):
-    pass
+    """
+    Emit LLVM IR for bpf_ktime_get_ns helper function call.
+    """
+    helper_id = ir.Constant(ir.IntType(64), 5)
+    fn_type = ir.FunctionType(ir.IntType(64), [], var_arg=False)
+    fn_ptr_type = ir.PointerType(fn_type)
+    fn_ptr = builder.inttoptr(helper_id, fn_ptr_type)
+    result = builder.call(fn_ptr, [], tail=False)
+    return result
 
 
 def bpf_map_lookup_elem_emitter(map_ptr, key_ptr, module, builder):
@@ -62,3 +70,14 @@ def bpf_printk_emitter(call, module, builder, func):
 
             builder.call(fn_ptr, [fmt_ptr, ir.Constant(
                 ir.IntType(32), len(fmt_str))], tail=True)
+
+
+helper_func_list = {
+    "lookup": bpf_map_lookup_elem_emitter,
+    "print": bpf_printk_emitter,
+    "ktime": bpf_ktime_get_ns_emitter,
+}
+
+
+def handle_helper_call(call, module, builder, func):
+    return None
