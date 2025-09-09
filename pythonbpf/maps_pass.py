@@ -105,7 +105,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     type_member = module.add_debug_info("DIDerivedType", {
         "tag": dc.DW_TAG_member,
         "name": "type",
-        "file": file_metadata,  # Use the stored file metadata
+        "file": file_metadata,
         "baseType": type_ptr,
         "size": 64,
         "offset": 0

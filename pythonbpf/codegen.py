@@ -84,10 +84,11 @@ def compile_to_ir(filename: str, output: str):
     module.add_named_metadata("llvm.module.flags", debug_info_version)
     module.add_named_metadata("llvm.module.flags", dwarf_version)
 
-    module.add_named_metadata("llvm.ident", ["llvmlite PythonBPF v0.0.0"])
+    module.add_named_metadata("llvm.ident", ["llvmlite PythonBPF v0.0.1"])
 
     with open(output, "w") as f:
         f.write(f"source_filename = \"{filename}\"\n")
         f.write(str(module))
+        f.write("\n")
 
     return output
