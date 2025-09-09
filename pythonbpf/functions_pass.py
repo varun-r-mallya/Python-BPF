@@ -81,6 +81,10 @@ def handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab):
             print("Unsupported assignment call function type")
 
 
+def handle_if_statement(module, builder, stmt, map_sym_tab, local_sym_tab):
+    pass
+
+
 def handle_expr(module, builder, expr, local_sym_tab, map_sym_tab):
     """Handle expression statements in the function body."""
     call = expr.value
@@ -92,6 +96,24 @@ def handle_expr(module, builder, expr, local_sym_tab, map_sym_tab):
                     call, module, builder, None, local_sym_tab, map_sym_tab)
                 return
     print("Unsupported expression statement")
+
+
+def handle_if(module, builder, stmt, map_sym_tab, local_sym_tab):
+    """Handle if statements in the function body."""
+    func = builder.block.parent
+    then_block = func.append_basic_block(name="if.then")
+    merge_block = func.append_basic_block(name="if.end")
+
+    cond = stmt.test
+
+    builder.cbranch(cond, then_block, merge_block)
+    builder.position_at_end(then_block)
+    for s in stmt.body:
+        pass
+    if not builder.block.is_terminated:
+        builder.branch(merge_block)
+
+    builder.position_at_end(merge_block)
 
 
 def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
@@ -106,6 +128,8 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
             handle_expr(module, builder, stmt, local_sym_tab, map_sym_tab)
         elif isinstance(stmt, ast.Assign):
             handle_assign(module, builder, stmt, map_sym_tab, local_sym_tab)
+        elif isinstance(stmt, ast.If):
+            handle_if(module, builder, stmt, map_sym_tab, local_sym_tab)
         elif isinstance(stmt, ast.Return):
             if stmt.value is None:
                 builder.ret(ir.Constant(ir.IntType(32), 0))
