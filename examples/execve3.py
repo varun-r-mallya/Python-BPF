@@ -34,9 +34,9 @@ def hello_again(ctx: c_void_p) -> c_int64:
     y = False
     if x > 0:
         if x < 2:
-            print("we prevailed")
+            print(f"we prevailed {x}")
         else:
-            print("we did not prevail")
+            print(f"we did not prevail {x}")
     ts = ktime()
     last().update(key, ts)
 
