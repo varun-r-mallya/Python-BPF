@@ -93,6 +93,8 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
                 print("Unsupported assignment call structure")
         else:
             print("Unsupported assignment call function type")
+    else:
+        print("Unsupported assignment value type")
 
 
 def handle_expr(func, module, builder, expr, local_sym_tab, map_sym_tab):
