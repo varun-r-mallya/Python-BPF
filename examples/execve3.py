@@ -30,8 +30,12 @@ def hello_again(ctx: c_void_p) -> c_int64:
 #        if delta < 1000000000:
 #            print("execve called within last second")
 #        last().delete(key)
-    if True:
+    x = False
+    x = True
+    if x:
         print("we prevailed")
+    if x:
+        print("we did not prevail")
     ts = ktime()
 #    last().update(key, ts)
     return c_int64(0)

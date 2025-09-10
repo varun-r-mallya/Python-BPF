@@ -37,7 +37,15 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     var_name = target.id
     rval = stmt.value
     if isinstance(rval, ast.Constant):
-        if isinstance(rval.value, int):
+        if isinstance(rval.value, bool):
+            if rval.value:
+                builder.store(ir.Constant(ir.IntType(1), 1),
+                              local_sym_tab[var_name])
+            else:
+                builder.store(ir.Constant(ir.IntType(1), 0),
+                              local_sym_tab[var_name])
+            print(f"Assigned constant {rval.value} to {var_name}")
+        elif isinstance(rval.value, int):
             # Assume c_int64 for now
             # var = builder.alloca(ir.IntType(64), name=var_name)
             # var.align = 8
@@ -232,7 +240,13 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
                     print("Unsupported assignment call function type")
                     continue
             elif isinstance(rval, ast.Constant):
-                if isinstance(rval.value, int):
+                if isinstance(rval.value, bool):
+                    ir_type = ir.IntType(1)
+                    var = builder.alloca(ir_type, name=var_name)
+                    var.align = 1
+                    print(
+                        f"Pre-allocated variable {var_name} of type c_bool")
+                elif isinstance(rval.value, int):
                     # Assume c_int64 for now
                     ir_type = ir.IntType(64)
                     var = builder.alloca(ir_type, name=var_name)
