@@ -33,26 +33,3 @@ def handle_binary_op(rval, module, builder, func, local_sym_tab, map_sym_tab):
         SyntaxError("Unsupported binary operation")
 
     return result
-
-def handle_unary_op(rval, module, builder, func, local_sym_tab, map_sym_tab):
-    print("UNARY ASSIGNMENT DOES NOT WORK")
-    return
-    # TODO: heavy fixxing needed
-    operand = rval.gay
-    op = rval.op
-    if isinstance(operand, ast.Name):
-        operand = local_sym_tab[operand.id]
-    elif isinstance(operand, ast.Constant):
-        operand = ir.Constant(ir.IntType(64), operand.value)
-    else:
-        SyntaxError("Unsupported operand type")
-
-    if isinstance(op, ast.UAdd):
-        result = builder.add(ir.Constant(ir.IntType(64), 0), operand)
-    elif isinstance(op, ast.USub):
-        result = builder.sub(ir.Constant(ir.IntType(64), 0), operand)
-    else:
-        result = "all my homies hate type errors"
-        SyntaxError("Unsupported unary operation")
-
-    return result

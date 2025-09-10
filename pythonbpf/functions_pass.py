@@ -3,7 +3,7 @@ import ast
 
 from .bpf_helper_handler import helper_func_list, handle_helper_call
 from .type_deducer import ctypes_to_ir
-from .unary_and_binary_ops import handle_binary_op, handle_unary_op
+from .binary_ops import handle_binary_op
 
 
 def get_probe_string(func_node):
@@ -21,17 +21,6 @@ def get_probe_string(func_node):
                 if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                     return arg.value
     return "helper"
-
-def handle_unary_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
-    """Handle unary assignment statements in the function body."""
-    SyntaxError("Unary assignment not supported")
-    target = stmt.target
-    if not isinstance(target, ast.Name):
-        SyntaxError("Unsupported assignment target")
-        return
-    else:
-        handle_unary_op(func, module, builder, stmt, map_sym_tab, local_sym_tab)
-        return
 
 def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     """Handle assignment statements in the function body."""
@@ -256,7 +245,7 @@ def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, did_re
     elif isinstance(stmt, ast.Assign):
         handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab)
     elif isinstance(stmt, ast.AugAssign):
-        handle_unary_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab)
+        raise SyntaxError("Augmented assignment not supported")
     elif isinstance(stmt, ast.If):
         handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab)
     elif isinstance(stmt, ast.Return):

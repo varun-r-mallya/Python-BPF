@@ -49,8 +49,6 @@ def hello_again(ctx: c_void_p) -> c_int64:
     keema = 8 * 9
     keesa = 10 - 11
     keeda = 10 / 5
-    # below does not spit IR
-    keeda += 1
     return c_int64(0)
 
 @bpf
