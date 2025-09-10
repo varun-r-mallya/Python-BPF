@@ -161,17 +161,32 @@ def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     start = builder.block.parent
     then_block = func.append_basic_block(name="if.then")
     merge_block = func.append_basic_block(name="if.end")
+    if stmt.orelse:
+        else_block = func.append_basic_block(name="if.else")
+    else:
+        else_block = None
 
     cond = handle_cond(func, module, builder, stmt.test,
                        local_sym_tab, map_sym_tab)
+    if else_block:
+        builder.cbranch(cond, then_block, else_block)
+    else:
+        builder.cbranch(cond, then_block, merge_block)
 
-    builder.cbranch(cond, then_block, merge_block)
     builder.position_at_end(then_block)
     for s in stmt.body:
         process_stmt(func, module, builder, s,
                      local_sym_tab, map_sym_tab, False)
     if not builder.block.is_terminated:
         builder.branch(merge_block)
+
+    if else_block:
+        builder.position_at_end(else_block)
+        for s in stmt.orelse:
+            process_stmt(func, module, builder, s,
+                         local_sym_tab, map_sym_tab, False)
+        if not builder.block.is_terminated:
+            builder.branch(merge_block)
 
     builder.position_at_end(merge_block)
 

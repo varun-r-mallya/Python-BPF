@@ -30,11 +30,11 @@ def hello_again(ctx: c_void_p) -> c_int64:
 #        if delta < 1000000000:
 #            print("execve called within last second")
 #        last().delete(key)
-    x = False
     x = True
+    x = False
     if x:
         print("we prevailed")
-    if x:
+    else:
         print("we did not prevail")
     ts = ktime()
     last().update(key, ts)
@@ -51,5 +51,6 @@ def hello_again(ctx: c_void_p) -> c_int64:
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
+
 
 compile()
