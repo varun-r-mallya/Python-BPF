@@ -99,10 +99,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
         print("Unsupported assignment value type")
 
 
-def handle_expr(func, module, builder, expr, local_sym_tab, map_sym_tab):
-    """Handle expression statements in the function body."""
-    print(f"Handling expression: {ast.dump(expr)}")
-
+def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab):
     if isinstance(expr, ast.Name):
         if expr.id in local_sym_tab:
             var = local_sym_tab[expr.id]
@@ -119,40 +116,30 @@ def handle_expr(func, module, builder, expr, local_sym_tab, map_sym_tab):
         else:
             print("Unsupported constant type")
             return None
+    elif isinstance(expr, ast.Call):
+        if isinstance(expr.func, ast.Name):
+            # check for helpers first
+            if expr.func.id in helper_func_list:
+                return handle_helper_call(
+                    expr, module, builder, func, local_sym_tab, map_sym_tab)
+        elif isinstance(expr.func, ast.Attribute):
+            if isinstance(expr.func.value, ast.Call) and isinstance(expr.func.value.func, ast.Name):
+                method_name = expr.func.attr
+                if method_name in helper_func_list:
+                    return handle_helper_call(
+                        expr, module, builder, func, local_sym_tab, map_sym_tab)
+    print("Unsupported expression evaluation")
+    return None
 
+
+def handle_expr(func, module, builder, expr, local_sym_tab, map_sym_tab):
+    """Handle expression statements in the function body."""
+    print(f"Handling expression: {ast.dump(expr)}")
     call = expr.value
     if isinstance(call, ast.Call):
-        if isinstance(call.func, ast.Name):
-            # check for helpers first
-            if call.func.id in helper_func_list:
-                handle_helper_call(
-                    call, module, builder, func, local_sym_tab, map_sym_tab)
-                return
-        elif isinstance(call.func, ast.Attribute):
-            if isinstance(call.func.value, ast.Call) and isinstance(call.func.value.func, ast.Name):
-                method_name = call.func.attr
-                if method_name in helper_func_list:
-                    handle_helper_call(
-                        call, module, builder, func, local_sym_tab, map_sym_tab)
-                    return
-    elif isinstance(call, ast.Name):
-        if call.id in local_sym_tab:
-            var = local_sym_tab[call.id]
-            val = builder.load(var)
-            return val
-        else:
-            print(f"Undefined variable {call.id}")
-            return None
-    elif isinstance(call, ast.Constant):
-        if isinstance(call.value, int):
-            return ir.Constant(ir.IntType(64), call.value)
-        elif isinstance(call.value, bool):
-            return ir.Constant(ir.IntType(1), int(call.value))
-        else:
-            print("Unsupported constant type")
-            return None
+        eval_expr(func, module, builder, call, local_sym_tab, map_sym_tab)
     else:
-        print("Unsupported expression statement")
+        print("Unsupported expression type")
 
 
 def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
@@ -173,13 +160,13 @@ def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
             print(f"Undefined variable {cond.id} in condition")
             return None
     elif isinstance(cond, ast.Compare):
-        lhs = handle_expr(func, module, builder, cond.left,
-                          local_sym_tab, map_sym_tab)
+        lhs = eval_expr(func, module, builder, cond.left,
+                        local_sym_tab, map_sym_tab)
         if len(cond.ops) != 1 or len(cond.comparators) != 1:
             print("Unsupported complex comparison")
             return None
-        rhs = handle_expr(func, module, builder,
-                          cond.comparators[0], local_sym_tab, map_sym_tab)
+        rhs = eval_expr(func, module, builder,
+                        cond.comparators[0], local_sym_tab, map_sym_tab)
         op = cond.ops[0]
 
         if lhs.type != rhs.type:
