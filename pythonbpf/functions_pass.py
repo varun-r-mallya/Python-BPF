@@ -113,11 +113,6 @@ def handle_expr(func, module, builder, expr, local_sym_tab, map_sym_tab):
                     handle_helper_call(
                         call, module, builder, func, local_sym_tab, map_sym_tab)
                     return
-            # I VIBED THIS WITHOUT UNDERSTANDING THIS PART>>>> TODO: check this later
-            if call.func.id in helper_func_list:
-                handle_helper_call(
-                    call, module, builder, func, local_sym_tab, map_sym_tab)
-                return
     elif isinstance(call, ast.Name):
         if call.id in local_sym_tab:
             var = local_sym_tab[call.id]
@@ -182,7 +177,7 @@ def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab):
 
 
 def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, did_return, ret_type=ir.IntType(64)):
-    print(f"Processing statement: {ast.dump(stmt)}")
+    # print(f"Processing statement: {ast.dump(stmt)}")
     if isinstance(stmt, ast.Expr):
         handle_expr(func, module, builder, stmt, local_sym_tab, map_sym_tab)
     elif isinstance(stmt, ast.Assign):
