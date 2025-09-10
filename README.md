@@ -6,6 +6,8 @@
 
 This is an LLVM IR generator for eBPF programs in Python. We use llvmlite to generate LLVM IR from pure Python. This is then compiled to LLVM object files, which can be loaded into the kernel for execution. We do not rely on BCC to do our compilation.
 
+# DO NOT USE IN PRODUCTION. IN DEVELOPMENT.
+
 ##  Installation
 - Have `clang` installed.
 - `pip install pythonbpf`
