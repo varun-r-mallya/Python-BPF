@@ -43,6 +43,7 @@ def hello_again(ctx: c_void_p) -> c_int64:
     key = 4
     last().update(key, ts)
     key = 5
+    st = "st"
     last().update(key, ts)
     return c_int64(0)
 

@@ -53,6 +53,8 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
                           local_sym_tab[var_name])
             # local_sym_tab[var_name] = var
             print(f"Assigned constant {rval.value} to {var_name}")
+        else:
+            print("Unsupported constant type")
     elif isinstance(rval, ast.Call):
         if isinstance(rval.func, ast.Name):
             call_type = rval.func.id
