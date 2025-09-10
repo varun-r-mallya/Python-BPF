@@ -16,8 +16,9 @@ class HashMap:
             del self.entries[key]
         else:
             raise KeyError(f"Key {key} not found in map")
-            
-    def update(self, key, value):
+    
+    # TODO: define the flags that can be added
+    def update(self, key, value, flags=None):
         if key in self.entries:
             self.entries[key] = value
         else:

@@ -37,7 +37,7 @@ def hello_again(ctx: c_void_p) -> c_int64:
     if x:
         print("we did not prevail")
     ts = ktime()
-#    last().update(key, ts)
+    last().update(key, ts, 0)
     return c_int64(0)
 
 
@@ -45,6 +45,5 @@ def hello_again(ctx: c_void_p) -> c_int64:
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
-
 
 compile()
