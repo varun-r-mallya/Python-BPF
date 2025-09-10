@@ -8,7 +8,7 @@ struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, u64);
     __type(value, u64);
-    __uint(max_entries, 1);
+    __uint(max_entries, 4);
 } last SEC(".maps");
 
 // Handler for syscall entry

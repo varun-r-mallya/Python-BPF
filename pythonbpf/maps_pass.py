@@ -74,6 +74,14 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "size": 32,
         "elements": [array_subrange]
     })
+    
+    array_subrange_max_entries = module.add_debug_info("DISubrange", {"count": map_params["max_entries"]})
+    array_type_max_entries = module.add_debug_info("DICompositeType", {
+        "tag": dc.DW_TAG_array_type,
+        "baseType": uint_type,
+        "size": 32,
+        "elements": [array_subrange_max_entries]
+    })
 
     # Create pointer types
     type_ptr = module.add_debug_info("DIDerivedType", {
@@ -84,7 +92,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
     max_entries_ptr = module.add_debug_info("DIDerivedType", {
         "tag": dc.DW_TAG_pointer_type,
-        "baseType": array_type,
+        "baseType": array_type_max_entries,
         "size": 64
     })
 

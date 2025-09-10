@@ -8,7 +8,7 @@ from ctypes import c_void_p, c_int64, c_int32, c_uint64
 @bpf
 @map
 def last() -> HashMap:
-    return HashMap(key_type=c_uint64, value_type=c_uint64, max_entries=1)
+    return HashMap(key_type=c_uint64, value_type=c_uint64, max_entries=3)
 
 
 @bpf
@@ -37,7 +37,13 @@ def hello_again(ctx: c_void_p) -> c_int64:
     if x:
         print("we did not prevail")
     ts = ktime()
-    last().update(key, ts, 0)
+    last().update(key, ts)
+    keys = 2
+    last().update(keys, ts)
+    key = 4
+    last().update(key, ts)
+    key = 5
+    last().update(key, ts)
     return c_int64(0)
 
 
