@@ -3,6 +3,7 @@ import ast
 
 from .bpf_helper_handler import helper_func_list, handle_helper_call
 from .type_deducer import ctypes_to_ir
+from .unary_and_binary_ops import handle_binary_op, handle_unary_op
 
 
 def get_probe_string(func_node):
@@ -21,6 +22,16 @@ def get_probe_string(func_node):
                     return arg.value
     return "helper"
 
+def handle_unary_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
+    """Handle unary assignment statements in the function body."""
+    SyntaxError("Unary assignment not supported")
+    target = stmt.target
+    if not isinstance(target, ast.Name):
+        SyntaxError("Unsupported assignment target")
+        return
+    else:
+        handle_unary_op(func, module, builder, stmt, map_sym_tab, local_sym_tab)
+        return
 
 def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     """Handle assignment statements in the function body."""
@@ -95,6 +106,8 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
                 print("Unsupported assignment call structure")
         else:
             print("Unsupported assignment call function type")
+    elif isinstance(rval, ast.BinOp):
+        handle_binary_op(rval, module, builder, func, local_sym_tab, map_sym_tab)
     else:
         print("Unsupported assignment value type")
 
@@ -237,11 +250,13 @@ def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab):
 
 
 def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, did_return, ret_type=ir.IntType(64)):
-    # print(f"Processing statement: {ast.dump(stmt)}")
+    print(f"Processing statement: {ast.dump(stmt)}")
     if isinstance(stmt, ast.Expr):
         handle_expr(func, module, builder, stmt, local_sym_tab, map_sym_tab)
     elif isinstance(stmt, ast.Assign):
         handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab)
+    elif isinstance(stmt, ast.AugAssign):
+        handle_unary_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab)
     elif isinstance(stmt, ast.If):
         handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab)
     elif isinstance(stmt, ast.Return):

@@ -39,20 +39,23 @@ def hello_again(ctx: c_void_p) -> c_int64:
             print("we did not prevail")
     ts = ktime()
     last().update(key, ts)
-    keys = 2
-    last().update(keys, ts)
-    key = 4
-    last().update(key, ts)
-    key = 5
+
     st = "st"
     last().update(key, ts)
-    return c_int64(0)
 
+    keena = 2 + 1
+    # below breaks
+    # keela = keena + 1
+    keema = 8 * 9
+    keesa = 10 - 11
+    keeda = 10 / 5
+    # below does not spit IR
+    keeda += 1
+    return c_int64(0)
 
 @bpf
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
-
 
 compile()
