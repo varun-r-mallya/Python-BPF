@@ -31,11 +31,12 @@ def hello_again(ctx: c_void_p) -> c_int64:
 #            print("execve called within last second")
 #        last().delete(key)
     x = True
-    x = False
+    y = False
     if x:
-        print("we prevailed")
-    else:
-        print("we did not prevail")
+        if y:
+            print("we prevailed")
+        else:
+            print("we did not prevail")
     ts = ktime()
     last().update(key, ts)
     keys = 2
