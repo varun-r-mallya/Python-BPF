@@ -24,24 +24,19 @@ def hello(ctx: c_void_p) -> c_int32:
 def hello_again(ctx: c_void_p) -> c_int64:
     print("exited")
     key = 0
+    delta = 0
     tsp = last().lookup(key)
-#    if tsp:
-#        delta = (bpf_ktime_get_ns() - tsp.value)
-#        if delta < 1000000000:
-#            print("execve called within last second")
-#        last().delete(key)
-    x = 1
-    y = False
-    if x > 0:
-        if x < 2:
-            print(f"we prevailed {x}")
-        else:
-            print(f"we did not prevail {x}")
+    if True:
+        delta = ktime()
+        ddelta = deref(delta)
+        if ddelta < 1000000000:
+            print("execve called within last second")
+        last().delete(key)
     ts = ktime()
     last().update(key, ts)
 
-    st = "st"
-    last().update(key, ts)
+#    st = "st"
+#   last().update(key, ts)
 
     keena = 2 + 1
     # below breaks
@@ -50,11 +45,32 @@ def hello_again(ctx: c_void_p) -> c_int64:
     keema = 8 * 9
     keesa = 10 - 11
     keeda = 10 / 5
+#    x = 3
+#   y = False
+#   if x > 0:
+#       if x < 5:
+#           print(f"we prevailed {x}")
+#       else:
+#           print(f"we did not prevail {x}")
+#   ts = ktime()
+#   last().update(key, ts)
+#
+#   st = "st"
+#   last().update(key, ts)
+#
+#   keena = 2 + 1
+#   # below breaks
+#   # keela = keena + 1
+#   keema = 8 * 9
+#   keesa = 10 - 11
+#   keeda = 10 / 5
     return c_int64(0)
+
 
 @bpf
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
+
 
 compile()

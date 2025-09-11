@@ -79,6 +79,17 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
                 builder.store(val, local_sym_tab[var_name])
                 # local_sym_tab[var_name] = var
                 print(f"Assigned constant {rval.func.id} to {var_name}")
+            elif call_type == "deref" and len(rval.args) == 1:
+                print(f"Handling deref assignment {ast.dump(rval)}")
+                val = eval_expr(func, module, builder, rval,
+                                local_sym_tab, map_sym_tab)
+                if val is None:
+                    print("Failed to evaluate deref argument")
+                    return
+                print(f"Dereferenced value: {val}, storing in {var_name}")
+                builder.store(val, local_sym_tab[var_name])
+                # local_sym_tab[var_name] = var
+                print(f"Dereferenced and assigned to {var_name}")
             else:
                 print(f"Unsupported assignment call type: {call_type}")
         elif isinstance(rval.func, ast.Attribute):
@@ -227,16 +238,16 @@ def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, did_re
     return did_return
 
 
-def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
-    """Process the body of a bpf function"""
-    # TODO: A lot.  We just have print -> bpf_trace_printk for now
-    did_return = False
-
-    local_sym_tab = {}
-
-    # pre-allocate dynamic variables
-    for stmt in func_node.body:
-        if isinstance(stmt, ast.Assign):
+def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_tab):
+    for stmt in body:
+        if isinstance(stmt, ast.If):
+            if stmt.body:
+                local_sym_tab = allocate_mem(
+                    module, builder, stmt.body, func, ret_type, map_sym_tab, local_sym_tab)
+            if stmt.orelse:
+                local_sym_tab = allocate_mem(
+                    module, builder, stmt.orelse, func, ret_type, map_sym_tab, local_sym_tab)
+        elif isinstance(stmt, ast.Assign):
             if len(stmt.targets) != 1:
                 print("Unsupported multiassignment")
                 continue
@@ -262,6 +273,13 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
                         var.align = ir_type.width // 8
                         print(
                             f"Pre-allocated variable {var_name} for helper")
+                    elif call_type == "deref" and len(rval.args) == 1:
+                        # Assume return type is int64 for now
+                        ir_type = ir.IntType(64)
+                        var = builder.alloca(ir_type, name=var_name)
+                        var.align = ir_type.width // 8
+                        print(
+                            f"Pre-allocated variable {var_name} for deref")
                 elif isinstance(rval.func, ast.Attribute):
                     ir_type = ir.PointerType(ir.IntType(64))
                     var = builder.alloca(ir_type, name=var_name)
@@ -292,6 +310,19 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
                 print("Unsupported assignment value type")
                 continue
             local_sym_tab[var_name] = var
+    return local_sym_tab
+
+
+def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
+    """Process the body of a bpf function"""
+    # TODO: A lot.  We just have print -> bpf_trace_printk for now
+    did_return = False
+
+    local_sym_tab = {}
+
+    # pre-allocate dynamic variables
+    local_sym_tab = allocate_mem(
+        module, builder, func_node.body, func, ret_type, map_sym_tab, local_sym_tab)
 
     print(f"Local symbol table: {local_sym_tab.keys()}")
 

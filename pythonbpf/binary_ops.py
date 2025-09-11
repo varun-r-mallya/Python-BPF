@@ -1,10 +1,14 @@
 import ast
 from llvmlite import ir
 
+
 def handle_binary_op(rval, module, builder, func, local_sym_tab, map_sym_tab):
+    print(module)
     left = rval.left
     right = rval.right
     op = rval.op
+
+    # In case of pointers, we'll deref once.
 
     if isinstance(left, ast.Name):
         left = local_sym_tab[left.id]
@@ -19,6 +23,8 @@ def handle_binary_op(rval, module, builder, func, local_sym_tab, map_sym_tab):
         right = ir.Constant(ir.IntType(64), right.value)
     else:
         SyntaxError("Unsupported right operand type")
+
+    print(f"left is {left}, right is {right}, op is {op}")
 
     if isinstance(op, ast.Add):
         result = builder.add(left, right)

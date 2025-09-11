@@ -25,7 +25,29 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab):
         from .bpf_helper_handler import helper_func_list, handle_helper_call
 
         if isinstance(expr.func, ast.Name):
-            # check for helpers first
+            # check deref
+            if expr.func.id == "deref":
+                print(f"Handling deref {ast.dump(expr)}")
+                if len(expr.args) != 1:
+                    print("deref takes exactly one argument")
+                    return None
+                arg = expr.args[0]
+                if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Name) and arg.func.id == "deref":
+                    print("Multiple deref not supported")
+                    return None
+                if isinstance(arg, ast.Name):
+                    if arg.id in local_sym_tab:
+                        arg = local_sym_tab[arg.id]
+                    else:
+                        print(f"Undefined variable {arg.id}")
+                        return None
+                if arg is None:
+                    print("Failed to evaluate deref argument")
+                    return None
+                val = builder.load(arg)
+                return val
+
+            # check for helpers
             if expr.func.id in helper_func_list:
                 return handle_helper_call(
                     expr, module, builder, func, local_sym_tab, map_sym_tab)

@@ -268,11 +268,67 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, local_sym_tab=No
     return result
 
 
+def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None):
+    """
+    Emit LLVM IR for bpf_map_delete_elem helper function call.
+    Expected call signature: map.delete(key)
+    """
+    # Check for correct number of arguments
+    if not call.args or len(call.args) != 1:
+        raise ValueError("Map delete expects exactly 1 argument (key), got "
+                         f"{len(call.args)}")
+
+    key_arg = call.args[0]
+
+    # Handle key argument
+    if isinstance(key_arg, ast.Name):
+        key_name = key_arg.id
+        if local_sym_tab and key_name in local_sym_tab:
+            key_ptr = local_sym_tab[key_name]
+        else:
+            raise ValueError(
+                f"Key variable {key_name} not found in local symbol table.")
+    elif isinstance(key_arg, ast.Constant) and isinstance(key_arg.value, int):
+        # Handle constant integer keys
+        key_val = key_arg.value
+        key_type = ir.IntType(64)
+        key_ptr = builder.alloca(key_type)
+        key_ptr.align = key_type.width // 8
+        builder.store(ir.Constant(key_type, key_val), key_ptr)
+    else:
+        raise NotImplementedError(
+            "Only simple variable names and integer constants are supported as keys in map delete.")
+
+    if key_ptr is None:
+        raise ValueError("Key pointer is None.")
+
+    # Cast map pointer to void*
+    map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
+
+    # Define function type for bpf_map_delete_elem
+    fn_type = ir.FunctionType(
+        ir.IntType(64),  # Return type: int64 (status code)
+        [ir.PointerType(), ir.PointerType()],  # Args: (void*, void*)
+        var_arg=False
+    )
+    fn_ptr_type = ir.PointerType(fn_type)
+
+    # Helper ID 3 is bpf_map_delete_elem
+    fn_addr = ir.Constant(ir.IntType(64), 3)
+    fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
+
+    # Call the helper function
+    result = builder.call(fn_ptr, [map_void_ptr, key_ptr], tail=False)
+
+    return result
+
+
 helper_func_list = {
     "lookup": bpf_map_lookup_elem_emitter,
     "print": bpf_printk_emitter,
     "ktime": bpf_ktime_get_ns_emitter,
     "update": bpf_map_update_elem_emitter,
+    "delete": bpf_map_delete_elem_emitter,
 }
 
 
