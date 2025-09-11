@@ -46,6 +46,7 @@ def hello_again(ctx: c_void_p) -> c_int64:
     keena = 2 + 1
     # below breaks
     # keela = keena + 1
+    # TODO: binops evaluate but into a random register and dont get assigned.
     keema = 8 * 9
     keesa = 10 - 11
     keeda = 10 / 5
