@@ -1,5 +1,5 @@
 from pythonbpf import bpf, map, section, bpfglobal, compile
-from pythonbpf.helpers import ktime
+from pythonbpf.helpers import ktime, deref
 from pythonbpf.maps import HashMap
 
 from ctypes import c_void_p, c_int64, c_int32, c_uint64
@@ -34,36 +34,13 @@ def hello_again(ctx: c_void_p) -> c_int64:
         last().delete(key)
     ts = ktime()
     last().update(key, ts)
-
+    
+    keema = 8
+    keeda = keema * keema
+    print(f"this is a variable {keeda}")
 #    st = "st"
 #   last().update(key, ts)
 
-    keena = 2 + 1
-    # below breaks
-    # keela = keena + 1
-    # TODO: binops evaluate but into a random register and dont get assigned.
-    keema = 8 * 9
-    keesa = 10 - 11
-    keeda = 10 / 5
-#    x = 3
-#   y = False
-#   if x > 0:
-#       if x < 5:
-#           print(f"we prevailed {x}")
-#       else:
-#           print(f"we did not prevail {x}")
-#   ts = ktime()
-#   last().update(key, ts)
-#
-#   st = "st"
-#   last().update(key, ts)
-#
-#   keena = 2 + 1
-#   # below breaks
-#   # keela = keena + 1
-#   keema = 8 * 9
-#   keesa = 10 - 11
-#   keeda = 10 / 5
     return c_int64(0)
 
 

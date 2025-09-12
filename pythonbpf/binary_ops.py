@@ -1,41 +1,64 @@
 import ast
 from llvmlite import ir
 
-
-def handle_binary_op(rval, module, builder, func, local_sym_tab, map_sym_tab):
+def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab):
     print(module)
     left = rval.left
     right = rval.right
     op = rval.op
 
-    # In case of pointers, we'll deref once.
-
+    # Handle left operand
     if isinstance(left, ast.Name):
-        left = local_sym_tab[left.id]
+        if left.id in local_sym_tab:
+            left = builder.load(local_sym_tab[left.id])
+        else:
+            raise SyntaxError(f"Undefined variable: {left.id}")
     elif isinstance(left, ast.Constant):
         left = ir.Constant(ir.IntType(64), left.value)
     else:
-        print("Unsupported left operand type")
+        raise SyntaxError("Unsupported left operand type")
 
     if isinstance(right, ast.Name):
-        right = local_sym_tab[right.id]
+        if right.id in local_sym_tab:
+            right = builder.load(local_sym_tab[right.id])  # Dereference the pre-assigned value
+        else:
+            raise SyntaxError(f"Undefined variable: {right.id}")
     elif isinstance(right, ast.Constant):
         right = ir.Constant(ir.IntType(64), right.value)
     else:
-        SyntaxError("Unsupported right operand type")
+        raise SyntaxError("Unsupported right operand type")
 
     print(f"left is {left}, right is {right}, op is {op}")
 
     if isinstance(op, ast.Add):
-        result = builder.add(left, right)
+        builder.store(builder.add(left, right),
+                      local_sym_tab[var_name])
     elif isinstance(op, ast.Sub):
-        result = builder.sub(left, right)
+        builder.store(builder.sub(left, right),
+                      local_sym_tab[var_name])
     elif isinstance(op, ast.Mult):
-        result = builder.mul(left, right)
+        builder.store(builder.mul(left, right),
+                      local_sym_tab[var_name])
     elif isinstance(op, ast.Div):
-        result = builder.sdiv(left, right)
+        builder.store(builder.sdiv(left, right),
+                      local_sym_tab[var_name])
+    elif isinstance(op, ast.Mod):
+        builder.store(builder.srem(left, right),
+                      local_sym_tab[var_name])
+    elif isinstance(op, ast.LShift):
+        builder.store(builder.shl(left, right),
+                      local_sym_tab[var_name])
+    elif isinstance(op, ast.RShift):
+        builder.store(builder.lshr(left, right),
+                      local_sym_tab[var_name])
+    elif isinstance(op, ast.BitOr):
+        builder.store(builder.or_(left, right),
+                      local_sym_tab[var_name])
+    elif isinstance(op, ast.BitXor):
+        builder.store(builder.xor(left, right),
+                      local_sym_tab[var_name])
+    elif isinstance(op, ast.BitAnd):
+        builder.store(builder.and_(left, right),
+                      local_sym_tab[var_name])
     else:
-        result = "fuck type errors"
-        SyntaxError("Unsupported binary operation")
-
-    return result
+        raise SyntaxError("Unsupported binary operation")

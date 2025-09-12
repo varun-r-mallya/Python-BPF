@@ -110,7 +110,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
         else:
             print("Unsupported assignment call function type")
     elif isinstance(rval, ast.BinOp):
-        handle_binary_op(rval, module, builder, func,
+        handle_binary_op(rval, module, builder, var_name,
                          local_sym_tab, map_sym_tab)
     else:
         print("Unsupported assignment value type")
@@ -306,6 +306,13 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
                 else:
                     print("Unsupported constant type")
                     continue
+            elif isinstance(rval, ast.BinOp):
+                # Assume c_int64 for now
+                ir_type = ir.IntType(64)
+                var = builder.alloca(ir_type, name=var_name)
+                var.align = ir_type.width // 8
+                print(
+                    f"Pre-allocated variable {var_name} of type c_int64")
             else:
                 print("Unsupported assignment value type")
                 continue

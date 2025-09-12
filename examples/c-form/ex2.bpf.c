@@ -13,6 +13,9 @@ struct {
 SEC("tracepoint/syscalls/sys_enter_execve")
 int hello(struct pt_regs *ctx) {
     bpf_printk("Hello, World!\n");
+    u64 b;
+    u64 a = 3 * b;
+    bpf_printk("%d", a);
     return 0;
 }
 
