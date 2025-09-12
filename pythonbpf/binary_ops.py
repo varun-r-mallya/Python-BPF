@@ -1,7 +1,21 @@
 import ast
 from llvmlite import ir
 
-def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab):
+
+def recursive_dereferencer(var, builder):
+    """ dereference until primitive type comes out"""
+    if var.type == ir.PointerType(ir.PointerType(ir.IntType(64))):
+        a = builder.load(var)
+        return recursive_dereferencer(a, builder)
+    elif var.type == ir.PointerType(ir.IntType(64)):
+        a = builder.load(var)
+        return recursive_dereferencer(a, builder)
+    elif var.type == ir.IntType(64):
+        return var
+    else:
+        raise TypeError(f"Unsupported type for dereferencing: {var.type}")
+
+def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab, func):
     print(module)
     left = rval.left
     right = rval.right
@@ -10,7 +24,7 @@ def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab
     # Handle left operand
     if isinstance(left, ast.Name):
         if left.id in local_sym_tab:
-            left = builder.load(local_sym_tab[left.id])
+            left = recursive_dereferencer(local_sym_tab[left.id], builder)
         else:
             raise SyntaxError(f"Undefined variable: {left.id}")
     elif isinstance(left, ast.Constant):
@@ -20,7 +34,7 @@ def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab
 
     if isinstance(right, ast.Name):
         if right.id in local_sym_tab:
-            right = builder.load(local_sym_tab[right.id])  # Dereference the pre-assigned value
+            right = recursive_dereferencer(local_sym_tab[right.id], builder)
         else:
             raise SyntaxError(f"Undefined variable: {right.id}")
     elif isinstance(right, ast.Constant):
@@ -59,6 +73,9 @@ def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab
                       local_sym_tab[var_name])
     elif isinstance(op, ast.BitAnd):
         builder.store(builder.and_(left, right),
+                      local_sym_tab[var_name])
+    elif isinstance(op, ast.FloorDiv):
+        builder.store(builder.udiv(left, right),
                       local_sym_tab[var_name])
     else:
         raise SyntaxError("Unsupported binary operation")

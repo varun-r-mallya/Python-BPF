@@ -35,9 +35,11 @@ def hello_again(ctx: c_void_p) -> c_int64:
     ts = ktime()
     last().update(key, ts)
     
-    keema = 8
-    keeda = keema * keema
-    print(f"this is a variable {keeda}")
+    va = 8
+    nm = 5 ^ va
+    al = 6 & 3
+    ru = (nm + al) + al
+    print(f"this is a variable {ru}")
 #    st = "st"
 #   last().update(key, ts)
 

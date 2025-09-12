@@ -111,7 +111,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
             print("Unsupported assignment call function type")
     elif isinstance(rval, ast.BinOp):
         handle_binary_op(rval, module, builder, var_name,
-                         local_sym_tab, map_sym_tab)
+                         local_sym_tab, map_sym_tab, func)
     else:
         print("Unsupported assignment value type")
 
@@ -129,6 +129,15 @@ def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
         if cond.id in local_sym_tab:
             var = local_sym_tab[cond.id]
             val = builder.load(var)
+            if val.type != ir.IntType(1):
+                # Convert nonzero values to true, zero to false
+                if isinstance(val.type, ir.PointerType):
+                    # For pointer types, compare with null pointer
+                    zero = ir.Constant(val.type, None)
+                else:
+                    # For integer types, compare with zero
+                    zero = ir.Constant(val.type, 0)
+                val = builder.icmp_signed("!=", val, zero)
             return val
         else:
             print(f"Undefined variable {cond.id} in condition")
