@@ -3,20 +3,10 @@
 #define u64 unsigned long long
 #define u32 unsigned int
 
-struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __uint(max_entries, 1);
-    __type(key, u32);
-    __type(value, u64);
-} last SEC(".maps");
-
-SEC("tracepoint/syscalls/sys_enter_execve")
-int hello(struct pt_regs *ctx) {
+SEC("xdp")
+int hello(struct xdp_md *ctx) {
     bpf_printk("Hello, World!\n");
-    u64 b;
-    u64 a = 3 * b;
-    bpf_printk("%d", a);
-    return 0;
+    return XDP_PASS;
 }
 
 char LICENSE[] SEC("license") = "GPL";

@@ -22,11 +22,23 @@ case "$1" in
         sudo rm -f "$PIN_PATH"
         echo "[+] Stopped"
         ;;
+    xdp)
+        echo "[*] Loading and running $FILE"
+        sudo bpftool net detach xdp dev $3
+        sudo bpftool prog load "$FILE" "$PIN_PATH" type xdp
+        sudo bpftool net attach xdp pinned "$PIN_PATH" dev $3
+        echo "[+] Program loaded. Press Ctrl+C to stop"
+        sudo cat /sys/kernel/debug/tracing/trace_pipe
+        sudo bpftool net detach xdp dev $3
+        sudo rm -rf "$PIN_PATH"
+        echo "[+] Stopped"
+        ;;
     *)
         echo "Usage: $0 <check|run|stop> <file.o>"
         echo "Examples:"
         echo "  $0 check program.bpf.o"
         echo "  $0 run program.bpf.o"
+        echo "  $0 xdp program.bpf.o wlp6s0"
         echo "  $0 stop"
         exit 1
         ;;

@@ -242,8 +242,17 @@ def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, did_re
                 builder.ret(ir.Constant(
                     ret_type, stmt.value.args[0].value))
                 did_return = True
+        elif isinstance(stmt.value, ast.Name):
+            if stmt.value.id == "XDP_PASS":
+                builder.ret(ir.Constant(ret_type, 2))
+                did_return = True
+            elif stmt.value.id == "XDP_DROP":
+                builder.ret(ir.Constant(ret_type, 1))
+                did_return = True
+            else:
+                raise ValueError("Failed to evaluate return expression")
         else:
-            print("Unsupported return value")
+            raise ValueError("Unsupported return value")
     return did_return
 
 
