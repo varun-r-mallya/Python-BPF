@@ -8,6 +8,12 @@ This is an LLVM IR generator for eBPF programs in Python. We use llvmlite to gen
 
 # DO NOT USE IN PRODUCTION. IN DEVELOPMENT.
 
+## Video Demo
+[Video demo for code under demo/](https://youtu.be/eMyLW8iWbks)
+
+## Slide Deck
+[Slide deck explaining the project](https://docs.google.com/presentation/d/1DsWDIVrpJhM4RgOETO9VWqUtEHo3-c7XIWmNpi6sTSo/edit?usp=sharing)
+
 ##  Installation
 - Have `clang` installed.
 - `pip install pythonbpf`
