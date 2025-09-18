@@ -1,3 +1,5 @@
+#define __TARGET_ARCH_arm64
+
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
@@ -14,15 +16,6 @@ struct {
 // Attach to kprobe for blk_start_request
 SEC("kprobe/blk_start_request")
 int BPF_KPROBE(trace_start, struct request *req)
-{
-    u64 ts = bpf_ktime_get_ns();
-    bpf_map_update_elem(&start, &req, &ts, BPF_ANY);
-    return 0;
-}
-
-// Optionally, attach also to blk_mq_start_request
-SEC("kprobe/blk_mq_start_request")
-int BPF_KPROBE(trace_start_mq, struct request *req)
 {
     u64 ts = bpf_ktime_get_ns();
     bpf_map_update_elem(&start, &req, &ts, BPF_ANY);
