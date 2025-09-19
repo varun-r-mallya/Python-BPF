@@ -86,7 +86,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None)
                         "Only string and integer constants are supported in f-string.")
             elif isinstance(value, ast.FormattedValue):
                 # Assume int for now
-                fmt_parts.append("%d")
+                fmt_parts.append("%lld")
                 if isinstance(value.value, ast.Name):
                     exprs.append(value.value)
                 else:
