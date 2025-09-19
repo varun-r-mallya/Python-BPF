@@ -323,12 +323,30 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, local_sym_tab=No
     return result
 
 
+def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local_sym_tab=None):
+    """
+    Emit LLVM IR for bpf_get_current_pid_tgid helper function call.
+    """
+    # func is an arg to just have a uniform signature with other emitters
+    helper_id = ir.Constant(ir.IntType(64), 14)
+    fn_type = ir.FunctionType(ir.IntType(64), [], var_arg=False)
+    fn_ptr_type = ir.PointerType(fn_type)
+    fn_ptr = builder.inttoptr(helper_id, fn_ptr_type)
+    result = builder.call(fn_ptr, [], tail=False)
+
+    # Extract the lower 32 bits (PID) using bitwise AND with 0xFFFFFFFF
+    mask = ir.Constant(ir.IntType(64), 0xFFFFFFFF)
+    pid = builder.and_(result, mask)
+    return pid
+
+
 helper_func_list = {
     "lookup": bpf_map_lookup_elem_emitter,
     "print": bpf_printk_emitter,
     "ktime": bpf_ktime_get_ns_emitter,
     "update": bpf_map_update_elem_emitter,
     "delete": bpf_map_delete_elem_emitter,
+    "pid": bpf_get_current_pid_tgid_emitter,
 }
 
 
