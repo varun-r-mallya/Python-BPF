@@ -36,7 +36,8 @@ def create_bpf_map(module, map_name, map_params):
     map_global = ir.GlobalVariable(module, map_struct_type, name=map_name)
     map_global.linkage = 'dso_local'
     map_global.global_constant = False
-    map_global.initializer = ir.Constant(map_struct_type, None)     # type: ignore
+    map_global.initializer = ir.Constant(
+        map_struct_type, None)     # type: ignore
     map_global.section = ".maps"
     map_global.align = 8        # type: ignore
 
@@ -46,6 +47,7 @@ def create_bpf_map(module, map_name, map_params):
     print(f"Created BPF map: {map_name}")
     map_sym_tab[map_name] = map_global
     return map_global
+
 
 def create_map_debug_info(module, map_global, map_name, map_params):
     """Generate debug information metadata for BPF map"""
@@ -74,8 +76,9 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "size": 32,
         "elements": [array_subrange]
     })
-    
-    array_subrange_max_entries = module.add_debug_info("DISubrange", {"count": map_params["max_entries"]})
+
+    array_subrange_max_entries = module.add_debug_info(
+        "DISubrange", {"count": map_params["max_entries"]})
     array_type_max_entries = module.add_debug_info("DICompositeType", {
         "tag": dc.DW_TAG_array_type,
         "baseType": uint_type,
@@ -199,6 +202,25 @@ def process_hash_map(map_name, rval, module):
             const_val = keyword.value.value
             if isinstance(const_val, (int, str)):
                 map_params["max_entries"] = const_val
+
+    print(f"Map parameters: {map_params}")
+    return create_bpf_map(module, map_name, map_params)
+
+
+def process_perf_event_map(map_name, rval, module):
+    print(f"Creating PerfEventArray map: {map_name}")
+    map_params = {"map_type": "PERF_EVENT_ARRAY"}
+
+    if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
+        map_params["key_type"] = rval.args[0].id
+    if len(rval.args) >= 2 and isinstance(rval.args[1], ast.Name):
+        map_params["value_type"] = rval.args[1].id
+
+    for keyword in rval.keywords:
+        if keyword.arg == "key_type" and isinstance(keyword.value, ast.Name):
+            map_params["key_type"] = keyword.value.id
+        elif keyword.arg == "value_type" and isinstance(keyword.value, ast.Name):
+            map_params["value_type"] = keyword.value.id
 
     print(f"Map parameters: {map_params}")
     return create_bpf_map(module, map_name, map_params)
