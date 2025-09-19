@@ -21,8 +21,17 @@ def maps_proc(tree, module, chunks):
     return map_sym_tab
 
 
+BPF_MAP_MAPPINGS = {
+    "HASH": 1,                # BPF_MAP_TYPE_HASH
+    "PERF_EVENT_ARRAY": 4,    # BPF_MAP_TYPE_PERF_EVENT_ARRAY
+}
+
+
 def create_bpf_map(module, map_name, map_params):
     """Create a BPF map in the module with the given parameters and debug info"""
+
+    map_type_str = map_params.get("map_type", "HASH")
+    map_type = BPF_MAP_MAPPINGS.get(map_type_str)
 
     # Create the anonymous struct type for BPF map
     map_struct_type = ir.LiteralStructType([
@@ -69,7 +78,8 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     })
 
     # Create array type for map type field (array of 1 unsigned int)
-    array_subrange = module.add_debug_info("DISubrange", {"count": 1})
+    array_subrange = module.add_debug_info(
+        "DISubrange", {"count": BPF_MAP_MAPPINGS[map_params.get("map_type", "HASH")]})
     array_type = module.add_debug_info("DICompositeType", {
         "tag": dc.DW_TAG_array_type,
         "baseType": uint_type,
