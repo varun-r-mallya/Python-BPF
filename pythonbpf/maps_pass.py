@@ -87,25 +87,10 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "elements": [array_subrange]
     })
 
-    array_subrange_max_entries = module.add_debug_info(
-        "DISubrange", {"count": map_params["max_entries"]})
-    array_type_max_entries = module.add_debug_info("DICompositeType", {
-        "tag": dc.DW_TAG_array_type,
-        "baseType": uint_type,
-        "size": 32,
-        "elements": [array_subrange_max_entries]
-    })
-
     # Create pointer types
     type_ptr = module.add_debug_info("DIDerivedType", {
         "tag": dc.DW_TAG_pointer_type,
         "baseType": array_type,
-        "size": 64
-    })
-
-    max_entries_ptr = module.add_debug_info("DIDerivedType", {
-        "tag": dc.DW_TAG_pointer_type,
-        "baseType": array_type_max_entries,
         "size": 64
     })
 
@@ -121,6 +106,8 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "size": 64
     })
 
+    elements_arr = []
+
     # Create struct members
     # scope field does not appear for some reason
     type_member = module.add_debug_info("DIDerivedType", {
@@ -131,15 +118,31 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "size": 64,
         "offset": 0
     })
+    elements_arr.append(type_member)
 
-    max_entries_member = module.add_debug_info("DIDerivedType", {
-        "tag": dc.DW_TAG_member,
-        "name": "max_entries",
-        "file": file_metadata,
-        "baseType": max_entries_ptr,
-        "size": 64,
-        "offset": 64
-    })
+    if "max_entries" in map_params:
+        array_subrange_max_entries = module.add_debug_info(
+            "DISubrange", {"count": map_params["max_entries"]})
+        array_type_max_entries = module.add_debug_info("DICompositeType", {
+            "tag": dc.DW_TAG_array_type,
+            "baseType": uint_type,
+            "size": 32,
+            "elements": [array_subrange_max_entries]
+        })
+        max_entries_ptr = module.add_debug_info("DIDerivedType", {
+            "tag": dc.DW_TAG_pointer_type,
+            "baseType": array_type_max_entries,
+            "size": 64
+        })
+        max_entries_member = module.add_debug_info("DIDerivedType", {
+            "tag": dc.DW_TAG_member,
+            "name": "max_entries",
+            "file": file_metadata,
+            "baseType": max_entries_ptr,
+            "size": 64,
+            "offset": 64
+        })
+        elements_arr.append(max_entries_member)
 
     key_member = module.add_debug_info("DIDerivedType", {
         "tag": dc.DW_TAG_member,
@@ -149,6 +152,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "size": 64,
         "offset": 128
     })
+    elements_arr.append(key_member)
 
     value_member = module.add_debug_info("DIDerivedType", {
         "tag": dc.DW_TAG_member,
@@ -158,13 +162,14 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         "size": 64,
         "offset": 192
     })
+    elements_arr.append(value_member)
 
     # Create the struct type
     struct_type = module.add_debug_info("DICompositeType", {
         "tag": dc.DW_TAG_structure_type,
         "file": file_metadata,
-        "size": 256,  # 4 * 64-bit pointers
-        "elements": [type_member, max_entries_member, key_member, value_member]
+        "size": 64 * len(elements_arr),  # 4 * 64-bit pointers
+        "elements": elements_arr,
     }, is_distinct=True)
 
     # Create global variable debug info

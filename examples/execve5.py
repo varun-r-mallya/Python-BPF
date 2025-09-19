@@ -1,9 +1,13 @@
 from pythonbpf import bpf, map, section, bpfglobal, compile
 from pythonbpf.helpers import ktime, pid
-from pythonbpf.maps import HashMap
+from pythonbpf.maps import PerfEventArray
 
 from ctypes import c_void_p, c_int64, c_int32, c_uint64
 
+@bpf
+@map
+def events() -> PerfEventArray:
+    return PerfEventArray(key_type=c_uint64, value_type=c_uint64)
 
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")
