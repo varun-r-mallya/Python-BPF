@@ -231,6 +231,10 @@ def process_bpf_map(func_node, module):
     map_name = func_node.name
     print(f"Processing BPF map: {map_name}")
 
+    BPF_MAP_TYPES = {"HashMap": process_hash_map,            # BPF_MAP_TYPE_HASH
+                     "PerfEventArray": process_perf_event_map,   # BPF_MAP_TYPE_PERF_EVENT_ARRAY
+                     }
+
     # For now, assume single return statement
     return_stmt = None
     for stmt in func_node.body:
@@ -243,7 +247,12 @@ def process_bpf_map(func_node, module):
     rval = return_stmt.value
 
     # Handle only HashMap maps
-    if isinstance(rval, ast.Call) and isinstance(rval.func, ast.Name) and rval.func.id == "HashMap":
-        process_hash_map(map_name, rval, module)
+    if isinstance(rval, ast.Call) and isinstance(rval.func, ast.Name):
+        if rval.func.id in BPF_MAP_TYPES:
+            handler = BPF_MAP_TYPES[rval.func.id]
+            handler(map_name, rval, module)
+        else:
+            print(f"Unknown map type {rval.func.id}, defaulting to HashMap")
+            process_hash_map(map_name, rval, module)
     else:
         raise ValueError("Function under @map must return a map")
