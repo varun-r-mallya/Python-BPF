@@ -10,16 +10,23 @@ class HashMap:
             return self.entries[key]
         else:
             return None
-            
+
     def delete(self, key):
         if key in self.entries:
             del self.entries[key]
         else:
             raise KeyError(f"Key {key} not found in map")
-    
+
     # TODO: define the flags that can be added
     def update(self, key, value, flags=None):
         if key in self.entries:
             self.entries[key] = value
         else:
             raise KeyError(f"Key {key} not found in map")
+
+
+class PerfEventArray:
+    def __init__(self, key_type, value_type):
+        self.key_type = key_type
+        self.value_type = value_type
+        self.entries = {}
