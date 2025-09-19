@@ -30,16 +30,12 @@ BPF_MAP_MAPPINGS = {
 def create_bpf_map(module, map_name, map_params):
     """Create a BPF map in the module with the given parameters and debug info"""
 
-    map_type_str = map_params.get("map_type", "HASH")
+    map_type_str = map_params.get("type", "HASH")
     map_type = BPF_MAP_MAPPINGS.get(map_type_str)
 
     # Create the anonymous struct type for BPF map
-    map_struct_type = ir.LiteralStructType([
-        ir.PointerType(),
-        ir.PointerType(),
-        ir.PointerType(),
-        ir.PointerType()
-    ])
+    map_struct_type = ir.LiteralStructType(
+        [ir.PointerType() for _ in range(len(map_params))])
 
     # Create the global variable
     map_global = ir.GlobalVariable(module, map_struct_type, name=map_name)
@@ -79,7 +75,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
     # Create array type for map type field (array of 1 unsigned int)
     array_subrange = module.add_debug_info(
-        "DISubrange", {"count": BPF_MAP_MAPPINGS[map_params.get("map_type", "HASH")]})
+        "DISubrange", {"count": BPF_MAP_MAPPINGS[map_params.get("type", "HASH")]})
     array_type = module.add_debug_info("DICompositeType", {
         "tag": dc.DW_TAG_array_type,
         "baseType": uint_type,
@@ -96,13 +92,15 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
     key_ptr = module.add_debug_info("DIDerivedType", {
         "tag": dc.DW_TAG_pointer_type,
-        "baseType": uint_type,  # Adjust based on actual key type
+        # Adjust based on actual key type
+        "baseType": array_type if "key_size" in map_params else uint_type,
         "size": 64
     })
 
     value_ptr = module.add_debug_info("DIDerivedType", {
         "tag": dc.DW_TAG_pointer_type,
-        "baseType": ulong_type,  # Adjust based on actual value type
+        # Adjust based on actual value type
+        "baseType": array_type if "value_size" in map_params else ulong_type,
         "size": 64
     })
 
@@ -110,15 +108,26 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
     # Create struct members
     # scope field does not appear for some reason
-    type_member = module.add_debug_info("DIDerivedType", {
-        "tag": dc.DW_TAG_member,
-        "name": "type",
-        "file": file_metadata,
-        "baseType": type_ptr,
-        "size": 64,
-        "offset": 0
-    })
-    elements_arr.append(type_member)
+    cnt = 0
+    for elem in map_params:
+        if elem == "max_entries":
+            continue
+        if elem == "type":
+            ptr = type_ptr
+        elif "key" in elem:
+            ptr = key_ptr
+        else:
+            ptr = value_ptr
+        member = module.add_debug_info("DIDerivedType", {
+            "tag": dc.DW_TAG_member,
+            "name": elem,
+            "file": file_metadata,
+            "baseType": ptr,
+            "size": 64,
+            "offset": cnt * 64
+        })
+        elements_arr.append(member)
+        cnt += 1
 
     if "max_entries" in map_params:
         array_subrange_max_entries = module.add_debug_info(
@@ -140,29 +149,9 @@ def create_map_debug_info(module, map_global, map_name, map_params):
             "file": file_metadata,
             "baseType": max_entries_ptr,
             "size": 64,
-            "offset": 64
+            "offset": cnt * 64
         })
         elements_arr.append(max_entries_member)
-
-    key_member = module.add_debug_info("DIDerivedType", {
-        "tag": dc.DW_TAG_member,
-        "name": "key",
-        "file": file_metadata,
-        "baseType": key_ptr,
-        "size": 64,
-        "offset": 128
-    })
-    elements_arr.append(key_member)
-
-    value_member = module.add_debug_info("DIDerivedType", {
-        "tag": dc.DW_TAG_member,
-        "name": "value",
-        "file": file_metadata,
-        "baseType": value_ptr,
-        "size": 64,
-        "offset": 192
-    })
-    elements_arr.append(value_member)
 
     # Create the struct type
     struct_type = module.add_debug_info("DICompositeType", {
@@ -196,23 +185,23 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
 def process_hash_map(map_name, rval, module):
     print(f"Creating HashMap map: {map_name}")
-    map_params: dict[str, object] = {"map_type": "HASH"}
+    map_params: dict[str, object] = {"type": "HASH"}
 
     # Assuming order: key_type, value_type, max_entries
     if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
-        map_params["key_type"] = rval.args[0].id
+        map_params["key"] = rval.args[0].id
     if len(rval.args) >= 2 and isinstance(rval.args[1], ast.Name):
-        map_params["value_type"] = rval.args[1].id
+        map_params["value"] = rval.args[1].id
     if len(rval.args) >= 3 and isinstance(rval.args[2], ast.Constant):
         const_val = rval.args[2].value
         if isinstance(const_val, (int, str)):  # safe check
             map_params["max_entries"] = const_val
 
     for keyword in rval.keywords:
-        if keyword.arg == "key_type" and isinstance(keyword.value, ast.Name):
-            map_params["key_type"] = keyword.value.id
-        elif keyword.arg == "value_type" and isinstance(keyword.value, ast.Name):
-            map_params["value_type"] = keyword.value.id
+        if keyword.arg == "key" and isinstance(keyword.value, ast.Name):
+            map_params["key"] = keyword.value.id
+        elif keyword.arg == "value" and isinstance(keyword.value, ast.Name):
+            map_params["value"] = keyword.value.id
         elif keyword.arg == "max_entries" and isinstance(keyword.value, ast.Constant):
             const_val = keyword.value.value
             if isinstance(const_val, (int, str)):
@@ -224,18 +213,18 @@ def process_hash_map(map_name, rval, module):
 
 def process_perf_event_map(map_name, rval, module):
     print(f"Creating PerfEventArray map: {map_name}")
-    map_params = {"map_type": "PERF_EVENT_ARRAY"}
+    map_params = {"type": "PERF_EVENT_ARRAY"}
 
     if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
-        map_params["key_type"] = rval.args[0].id
+        map_params["key_size"] = rval.args[0].id
     if len(rval.args) >= 2 and isinstance(rval.args[1], ast.Name):
-        map_params["value_type"] = rval.args[1].id
+        map_params["value_size"] = rval.args[1].id
 
     for keyword in rval.keywords:
-        if keyword.arg == "key_type" and isinstance(keyword.value, ast.Name):
-            map_params["key_type"] = keyword.value.id
-        elif keyword.arg == "value_type" and isinstance(keyword.value, ast.Name):
-            map_params["value_type"] = keyword.value.id
+        if keyword.arg == "key_size" and isinstance(keyword.value, ast.Name):
+            map_params["key_size"] = keyword.value.id
+        elif keyword.arg == "value_size" and isinstance(keyword.value, ast.Name):
+            map_params["value_size"] = keyword.value.id
 
     print(f"Map parameters: {map_params}")
     return create_bpf_map(module, map_name, map_params)

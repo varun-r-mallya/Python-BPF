@@ -8,7 +8,7 @@ from ctypes import c_void_p, c_int64, c_int32, c_uint64
 @bpf
 @map
 def last() -> HashMap:
-    return HashMap(key_type=c_uint64, value_type=c_uint64, max_entries=3)
+    return HashMap(key=c_uint64, value=c_uint64, max_entries=3)
 
 
 @bpf

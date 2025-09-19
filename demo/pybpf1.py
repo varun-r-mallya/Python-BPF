@@ -14,7 +14,7 @@ from ctypes import c_void_p, c_int64
 @bpf
 @map
 def count() -> HashMap:
-    return HashMap(key_type=c_int64, value_type=c_int64, max_entries=1)
+    return HashMap(key=c_int64, value=c_int64, max_entries=1)
 
 
 @bpf

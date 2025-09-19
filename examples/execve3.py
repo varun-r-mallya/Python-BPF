@@ -8,7 +8,7 @@ from ctypes import c_void_p, c_int64, c_int32, c_uint64
 @bpf
 @map
 def last() -> HashMap:
-    return HashMap(key_type=c_uint64, value_type=c_uint64, max_entries=3)
+    return HashMap(key=c_uint64, value=c_uint64, max_entries=3)
 
 
 @bpf
@@ -25,23 +25,23 @@ def hello_again(ctx: c_void_p) -> c_int64:
     print("exited")
     key = 0
     delta = 0
+    dddelta = 0
     tsp = last().lookup(key)
     if True:
         delta = ktime()
         ddelta = deref(delta)
-        if ddelta < 1000000000:
+        ttsp = deref(deref(tsp))
+        dddelta = ddelta - ttsp
+        if dddelta < 1000000000:
             print("execve called within last second")
         last().delete(key)
     ts = ktime()
     last().update(key, ts)
-    
+
     va = 8
-    nm = 5 ^ va
+    nm = 5 + va
     al = 6 & 3
-    ru = (nm + al) + al
-    print(f"this is a variable {ru}")
-#    st = "st"
-#   last().update(key, ts)
+    print(f"this is a variable {nm}")
 
     return c_int64(0)
 

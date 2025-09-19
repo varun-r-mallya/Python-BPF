@@ -1,7 +1,7 @@
 class HashMap:
-    def __init__(self, key_type, value_type, max_entries):
-        self.key_type = key_type
-        self.value_type = value_type
+    def __init__(self, key, value, max_entries):
+        self.key = key
+        self.value = value
         self.max_entries = max_entries
         self.entries = {}
 
@@ -26,7 +26,7 @@ class HashMap:
 
 
 class PerfEventArray:
-    def __init__(self, key_type, value_type):
-        self.key_type = key_type
-        self.value_type = value_type
+    def __init__(self, key_size, value_size):
+        self.key_type = key_size
+        self.value_type = value_size
         self.entries = {}

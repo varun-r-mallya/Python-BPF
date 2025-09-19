@@ -7,7 +7,7 @@ from ctypes import c_void_p, c_int64, c_int32, c_uint64
 @bpf
 @map
 def events() -> PerfEventArray:
-    return PerfEventArray(key_type=c_uint64, value_type=c_uint64)
+    return PerfEventArray(key_size=c_int32, value_size=c_int32)
 
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")

@@ -7,7 +7,7 @@ from pythonbpf.maps import HashMap
 @bpf
 @map
 def last() -> HashMap:
-    return HashMap(key_type=c_uint64, value_type=c_uint64, max_entries=1)
+    return HashMap(key=c_uint64, value=c_uint64, max_entries=1)
 
 
 @bpf

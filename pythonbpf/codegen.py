@@ -9,6 +9,7 @@ import subprocess
 import inspect
 from pathlib import Path
 
+
 def find_bpf_chunks(tree):
     """Find all functions decorated with @bpf in the AST."""
     bpf_functions = []
@@ -49,7 +50,7 @@ def compile_to_ir(filename: str, output: str):
             "filename": filename,
             "directory": os.path.dirname(filename)
         })
-        
+
         module._debug_compile_unit = module.add_debug_info("DICompileUnit", {       # type: ignore
             "language": 29,  # DW_LANG_C11
             "file": module._file_metadata,      # type: ignore
@@ -61,7 +62,8 @@ def compile_to_ir(filename: str, output: str):
             "nameTableKind": 0
         }, is_distinct=True)
 
-        module.add_named_metadata("llvm.dbg.cu", module._debug_compile_unit)        # type: ignore
+        module.add_named_metadata(
+            "llvm.dbg.cu", module._debug_compile_unit)        # type: ignore
 
     processor(source, filename, module)
 
@@ -95,6 +97,7 @@ def compile_to_ir(filename: str, output: str):
 
     return output
 
+
 def compile():
     # Look one level up the stack to the caller of this function
     caller_frame = inspect.stack()[1]
@@ -110,4 +113,4 @@ def compile():
         str(ll_file), "-o", str(o_file)
     ], check=True)
 
-    print(f"Object written to {o_file}")
+    print(f"Object written to {o_file}, {ll_file} can be removed")
