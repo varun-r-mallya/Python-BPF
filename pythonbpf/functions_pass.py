@@ -130,30 +130,8 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
         elif isinstance(rval.func, ast.Attribute):
             print(f"Assignment call attribute: {ast.dump(rval.func)}")
             if isinstance(rval.func.value, ast.Name):
-                # probably a struct access
-                var_name = rval.func.value.id
-                field_name = rval.func.attr
-
-                print(f"Handling struct field assignment"
-                      f"{var_name}.{field_name}")
-
-                if var_name in local_sym_tab and var_name in local_var_metadata:
-                    struct_type = local_var_metadata[var_name]
-                    struct_info = structs_sym_tab[struct_type]
-
-                    if field_name in struct_info["fields"]:
-                        field_idx = struct_info["fields"][field_name]
-                        struct_ptr = local_sym_tab[var_name]
-                        field_ptr = builder.gep(
-                            struct_ptr, [ir.Constant(ir.IntType(32), 0),
-                                         ir.Constant(ir.IntType(32), field_idx)],
-                            inbounds=True)
-                        val = eval_expr(func, module, builder, rval,
-                                        local_sym_tab, map_sym_tab)
-                        if val is None:
-                            print("Failed to evaluate struct field assignment")
-                            return
-                        builder.store(val, field_ptr)
+                # TODO: probably a struct access
+                print(f"TODO STRUCT ACCESS {ast.dump(rval)}")
             elif isinstance(rval.func.value, ast.Call) and isinstance(rval.func.value.func, ast.Name):
                 map_name = rval.func.value.func.id
                 method_name = rval.func.attr
