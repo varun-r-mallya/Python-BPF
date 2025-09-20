@@ -7,6 +7,8 @@ from .type_deducer import ctypes_to_ir
 from .binary_ops import handle_binary_op
 from .expr_pass import eval_expr, handle_expr
 
+local_var_metadata = {}
+
 
 def get_probe_string(func_node):
     """Extract the probe string from the decorator of the function node."""
@@ -298,6 +300,16 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
                         var.align = ir_type.width // 8
                         print(
                             f"Pre-allocated variable {var_name} for deref")
+                    elif call_type in structs_sym_tab:
+                        struct_info = structs_sym_tab[call_type]
+                        ir_type = struct_info["type"]
+                        var = builder.alloca(ir_type, name=var_name)
+
+                        # Null init
+                        builder.store(ir.Constant(ir_type, None), var)
+                        local_var_metadata[var_name] = call_type
+                        print(
+                            f"Pre-allocated variable {var_name} for struct {call_type}")
                 elif isinstance(rval.func, ast.Attribute):
                     ir_type = ir.PointerType(ir.IntType(64))
                     var = builder.alloca(ir_type, name=var_name)

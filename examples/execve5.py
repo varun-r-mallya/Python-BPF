@@ -19,6 +19,7 @@ def events() -> PerfEventArray:
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")
 def hello(ctx: c_void_p) -> c_int32:
+    dataobj = data_t()
     ts = ktime()
     process_id = pid()
     print(f"clone called at {ts} by pid {process_id}")
