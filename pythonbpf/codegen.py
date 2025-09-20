@@ -33,7 +33,7 @@ def processor(source_code, filename, module):
 
     structs_sym_tab = structs_proc(tree, module, bpf_chunks)
     map_sym_tab = maps_proc(tree, module, bpf_chunks)
-    func_proc(tree, module, bpf_chunks, map_sym_tab)
+    func_proc(tree, module, bpf_chunks, map_sym_tab, structs_sym_tab)
 
     license_processing(tree, module)
     globals_processing(tree, module)

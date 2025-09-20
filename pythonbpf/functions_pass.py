@@ -219,7 +219,7 @@ def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     builder.position_at_end(merge_block)
 
 
-def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, did_return, ret_type=ir.IntType(64)):
+def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, structs_sym_tab, did_return, ret_type=ir.IntType(64)):
     print(f"Processing statement: {ast.dump(stmt)}")
     if isinstance(stmt, ast.Expr):
         handle_expr(func, module, builder, stmt, local_sym_tab, map_sym_tab)
@@ -256,15 +256,15 @@ def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, did_re
     return did_return
 
 
-def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_tab):
+def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_tab, structs_sym_tab):
     for stmt in body:
         if isinstance(stmt, ast.If):
             if stmt.body:
                 local_sym_tab = allocate_mem(
-                    module, builder, stmt.body, func, ret_type, map_sym_tab, local_sym_tab)
+                    module, builder, stmt.body, func, ret_type, map_sym_tab, local_sym_tab, structs_sym_tab)
             if stmt.orelse:
                 local_sym_tab = allocate_mem(
-                    module, builder, stmt.orelse, func, ret_type, map_sym_tab, local_sym_tab)
+                    module, builder, stmt.orelse, func, ret_type, map_sym_tab, local_sym_tab, structs_sym_tab)
         elif isinstance(stmt, ast.Assign):
             if len(stmt.targets) != 1:
                 print("Unsupported multiassignment")
@@ -338,7 +338,7 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
     return local_sym_tab
 
 
-def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
+def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab, structs_sym_tab):
     """Process the body of a bpf function"""
     # TODO: A lot.  We just have print -> bpf_trace_printk for now
     did_return = False
@@ -347,19 +347,19 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab):
 
     # pre-allocate dynamic variables
     local_sym_tab = allocate_mem(
-        module, builder, func_node.body, func, ret_type, map_sym_tab, local_sym_tab)
+        module, builder, func_node.body, func, ret_type, map_sym_tab, local_sym_tab, structs_sym_tab)
 
     print(f"Local symbol table: {local_sym_tab.keys()}")
 
     for stmt in func_node.body:
         did_return = process_stmt(func, module, builder, stmt, local_sym_tab,
-                                  map_sym_tab, did_return, ret_type)
+                                  map_sym_tab, structs_sym_tab, did_return, ret_type)
 
     if not did_return:
         builder.ret(ir.Constant(ir.IntType(32), 0))
 
 
-def process_bpf_chunk(func_node, module, return_type, map_sym_tab):
+def process_bpf_chunk(func_node, module, return_type, map_sym_tab, structs_sym_tab):
     """Process a single BPF chunk (function) and emit corresponding LLVM IR."""
 
     func_name = func_node.name
@@ -392,12 +392,13 @@ def process_bpf_chunk(func_node, module, return_type, map_sym_tab):
     block = func.append_basic_block(name="entry")
     builder = ir.IRBuilder(block)
 
-    process_func_body(module, builder, func_node, func, ret_type, map_sym_tab)
+    process_func_body(module, builder, func_node, func,
+                      ret_type, map_sym_tab, structs_sym_tab)
 
     return func
 
 
-def func_proc(tree, module, chunks, map_sym_tab):
+def func_proc(tree, module, chunks, map_sym_tab, structs_sym_tab):
     for func_node in chunks:
         is_global = False
         for decorator in func_node.decorator_list:
@@ -410,7 +411,7 @@ def func_proc(tree, module, chunks, map_sym_tab):
         print(f"Found probe_string of {func_node.name}: {func_type}")
 
         process_bpf_chunk(func_node, module, ctypes_to_ir(
-            infer_return_type(func_node)), map_sym_tab)
+            infer_return_type(func_node)), map_sym_tab, structs_sym_tab)
 
 
 def infer_return_type(func_node: ast.FunctionDef):
