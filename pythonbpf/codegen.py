@@ -3,6 +3,7 @@ from llvmlite import ir
 from .license_pass import license_processing
 from .functions_pass import func_proc
 from .maps_pass import maps_proc
+from .structs_pass import structs_proc
 from .globals_pass import globals_processing
 import os
 import subprocess
@@ -30,6 +31,7 @@ def processor(source_code, filename, module):
     for func_node in bpf_chunks:
         print(f"Found BPF function/struct: {func_node.name}")
 
+    structs_sym_tab = structs_proc(tree, module, bpf_chunks)
     map_sym_tab = maps_proc(tree, module, bpf_chunks)
     func_proc(tree, module, bpf_chunks, map_sym_tab)
 

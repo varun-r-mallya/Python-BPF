@@ -401,10 +401,7 @@ def func_proc(tree, module, chunks, map_sym_tab):
     for func_node in chunks:
         is_global = False
         for decorator in func_node.decorator_list:
-            if isinstance(decorator, ast.Name) and decorator.id == "map":
-                is_global = True
-                break
-            elif isinstance(decorator, ast.Name) and decorator.id == "bpfglobal":
+            if isinstance(decorator, ast.Name) and decorator.id in ("map", "bpfglobal", "struct"):
                 is_global = True
                 break
         if is_global:
