@@ -1,8 +1,15 @@
-from pythonbpf import bpf, map, section, bpfglobal, compile
+from pythonbpf import bpf, map, struct, section, bpfglobal, compile
 from pythonbpf.helpers import ktime, pid
 from pythonbpf.maps import PerfEventArray
 
 from ctypes import c_void_p, c_int64, c_int32, c_uint64
+
+
+@bpf
+@struct
+class data_t:
+    pid: c_uint64
+    ts: c_uint64
 
 @bpf
 @map
