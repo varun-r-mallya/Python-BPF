@@ -14,7 +14,7 @@ def find_bpf_chunks(tree):
     """Find all functions decorated with @bpf in the AST."""
     bpf_functions = []
     for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef):
+        if isinstance(node, ast.FunctionDef) or isinstance(node, ast.ClassDef):
             for decorator in node.decorator_list:
                 if isinstance(decorator, ast.Name) and decorator.id == "bpf":
                     bpf_functions.append(node)
@@ -28,7 +28,7 @@ def processor(source_code, filename, module):
 
     bpf_chunks = find_bpf_chunks(tree)
     for func_node in bpf_chunks:
-        print(f"Found BPF function: {func_node.name}")
+        print(f"Found BPF function/struct: {func_node.name}")
 
     map_sym_tab = maps_proc(tree, module, bpf_chunks)
     func_proc(tree, module, bpf_chunks, map_sym_tab)
