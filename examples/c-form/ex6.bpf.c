@@ -9,7 +9,7 @@
 struct data_t {
     __u32 pid;
     __u64 ts;
-    char comm[TASK_COMM_LEN];
+//    char comm[TASK_COMM_LEN];
 };
 
 // Define a perf event output map
@@ -31,7 +31,7 @@ int hello(struct pt_regs *ctx)
     data.ts = bpf_ktime_get_ns();
     
     // Get current process name
-    bpf_get_current_comm(&data.comm, sizeof(data.comm));
+//    bpf_get_current_comm(&data.comm, sizeof(data.comm));
     
     // Submit data to userspace via perf event
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, 

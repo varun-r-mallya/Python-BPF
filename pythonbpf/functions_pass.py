@@ -27,7 +27,7 @@ def get_probe_string(func_node):
     return "helper"
 
 
-def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
+def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_sym_tab):
     """Handle assignment statements in the function body."""
     if len(stmt.targets) != 1:
         print("Unsupported multiassignment")
@@ -36,12 +36,35 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     num_types = ("c_int32", "c_int64", "c_uint32", "c_uint64")
 
     target = stmt.targets[0]
-    if not isinstance(target, ast.Name):
+    print(f"Handling assignment to {ast.dump(target)}")
+    if not isinstance(target, ast.Name) and not isinstance(target, ast.Attribute):
         print("Unsupported assignment target")
         return
-    var_name = target.id
+    var_name = target.id if isinstance(target, ast.Name) else target.value.id
     rval = stmt.value
-    if isinstance(rval, ast.Constant):
+    if isinstance(target, ast.Attribute):
+        # struct field assignment
+        field_name = target.attr
+        if var_name in local_sym_tab and var_name in local_var_metadata:
+            struct_type = local_var_metadata[var_name]
+            struct_info = structs_sym_tab[struct_type]
+
+            if field_name in struct_info["fields"]:
+                field_idx = struct_info["fields"][field_name]
+                struct_ptr = local_sym_tab[var_name]
+                field_ptr = builder.gep(
+                    struct_ptr, [ir.Constant(ir.IntType(32), 0),
+                                 ir.Constant(ir.IntType(32), field_idx)],
+                    inbounds=True)
+                val = eval_expr(func, module, builder, rval,
+                                local_sym_tab, map_sym_tab)
+                if val is None:
+                    print("Failed to evaluate struct field assignment")
+                    return
+                builder.store(val, field_ptr)
+                print(f"Assigned to struct field {var_name}.{field_name}")
+                return
+    elif isinstance(rval, ast.Constant):
         if isinstance(rval.value, bool):
             if rval.value:
                 builder.store(ir.Constant(ir.IntType(1), 1),
@@ -92,10 +115,46 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab):
                 builder.store(val, local_sym_tab[var_name])
                 # local_sym_tab[var_name] = var
                 print(f"Dereferenced and assigned to {var_name}")
+            elif call_type in structs_sym_tab and len(rval.args) == 0:
+                struct_info = structs_sym_tab[call_type]
+                ir_type = struct_info["type"]
+                # var = builder.alloca(ir_type, name=var_name)
+                # Null init
+                builder.store(ir.Constant(ir_type, None),
+                              local_sym_tab[var_name])
+                local_var_metadata[var_name] = call_type
+                print(f"Assigned struct {call_type} to {var_name}")
+                # local_sym_tab[var_name] = var
             else:
                 print(f"Unsupported assignment call type: {call_type}")
         elif isinstance(rval.func, ast.Attribute):
-            if isinstance(rval.func.value, ast.Call) and isinstance(rval.func.value.func, ast.Name):
+            print(f"Assignment call attribute: {ast.dump(rval.func)}")
+            if isinstance(rval.func.value, ast.Name):
+                # probably a struct access
+                var_name = rval.func.value.id
+                field_name = rval.func.attr
+
+                print(f"Handling struct field assignment"
+                      f"{var_name}.{field_name}")
+
+                if var_name in local_sym_tab and var_name in local_var_metadata:
+                    struct_type = local_var_metadata[var_name]
+                    struct_info = structs_sym_tab[struct_type]
+
+                    if field_name in struct_info["fields"]:
+                        field_idx = struct_info["fields"][field_name]
+                        struct_ptr = local_sym_tab[var_name]
+                        field_ptr = builder.gep(
+                            struct_ptr, [ir.Constant(ir.IntType(32), 0),
+                                         ir.Constant(ir.IntType(32), field_idx)],
+                            inbounds=True)
+                        val = eval_expr(func, module, builder, rval,
+                                        local_sym_tab, map_sym_tab)
+                        if val is None:
+                            print("Failed to evaluate struct field assignment")
+                            return
+                        builder.store(val, field_ptr)
+            elif isinstance(rval.func.value, ast.Call) and isinstance(rval.func.value.func, ast.Name):
                 map_name = rval.func.value.func.id
                 method_name = rval.func.attr
                 if map_name in map_sym_tab:
@@ -226,7 +285,8 @@ def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, struct
     if isinstance(stmt, ast.Expr):
         handle_expr(func, module, builder, stmt, local_sym_tab, map_sym_tab)
     elif isinstance(stmt, ast.Assign):
-        handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab)
+        handle_assign(func, module, builder, stmt, map_sym_tab,
+                      local_sym_tab, structs_sym_tab)
     elif isinstance(stmt, ast.AugAssign):
         raise SyntaxError("Augmented assignment not supported")
     elif isinstance(stmt, ast.If):
@@ -304,9 +364,6 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
                         struct_info = structs_sym_tab[call_type]
                         ir_type = struct_info["type"]
                         var = builder.alloca(ir_type, name=var_name)
-
-                        # Null init
-                        builder.store(ir.Constant(ir_type, None), var)
                         local_var_metadata[var_name] = call_type
                         print(
                             f"Pre-allocated variable {var_name} for struct {call_type}")

@@ -11,10 +11,12 @@ class data_t:
     pid: c_uint64
     ts: c_uint64
 
+
 @bpf
 @map
 def events() -> PerfEventArray:
     return PerfEventArray(key_size=c_int32, value_size=c_int32)
+
 
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")
@@ -22,6 +24,8 @@ def hello(ctx: c_void_p) -> c_int32:
     dataobj = data_t()
     ts = ktime()
     process_id = pid()
+    dataobj.pid = process_id
+    dataobj.ts = ts
     print(f"clone called at {ts} by pid {process_id}")
     return c_int32(0)
 
