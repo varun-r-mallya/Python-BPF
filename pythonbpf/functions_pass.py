@@ -57,7 +57,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                                  ir.Constant(ir.IntType(32), field_idx)],
                     inbounds=True)
                 val = eval_expr(func, module, builder, rval,
-                                local_sym_tab, map_sym_tab)
+                                local_sym_tab, map_sym_tab, structs_sym_tab)
                 if val is None:
                     print("Failed to evaluate struct field assignment")
                     return
@@ -100,14 +100,14 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                 # var = builder.alloca(ir.IntType(64), name=var_name)
                 # var.align = 8
                 val = handle_helper_call(
-                    rval, module, builder, None, local_sym_tab, map_sym_tab, structs_sym_tab)
+                    rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
                 builder.store(val, local_sym_tab[var_name])
                 # local_sym_tab[var_name] = var
                 print(f"Assigned constant {rval.func.id} to {var_name}")
             elif call_type == "deref" and len(rval.args) == 1:
                 print(f"Handling deref assignment {ast.dump(rval)}")
                 val = eval_expr(func, module, builder, rval,
-                                local_sym_tab, map_sym_tab)
+                                local_sym_tab, map_sym_tab, structs_sym_tab)
                 if val is None:
                     print("Failed to evaluate deref argument")
                     return
@@ -139,7 +139,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                     map_ptr = map_sym_tab[map_name]
                     if method_name in helper_func_list:
                         val = handle_helper_call(
-                            rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab)
+                            rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
                         # var = builder.alloca(ir.IntType(64), name=var_name)
                         # var.align = 8
                         builder.store(val, local_sym_tab[var_name])
@@ -261,7 +261,8 @@ def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab):
 def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, structs_sym_tab, did_return, ret_type=ir.IntType(64)):
     print(f"Processing statement: {ast.dump(stmt)}")
     if isinstance(stmt, ast.Expr):
-        handle_expr(func, module, builder, stmt, local_sym_tab, map_sym_tab)
+        handle_expr(func, module, builder, stmt, local_sym_tab,
+                    map_sym_tab, structs_sym_tab, local_var_metadata)
     elif isinstance(stmt, ast.Assign):
         handle_assign(func, module, builder, stmt, map_sym_tab,
                       local_sym_tab, structs_sym_tab)

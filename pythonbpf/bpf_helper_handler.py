@@ -16,7 +16,7 @@ def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab
     return result
 
 
-def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None, struct_sym_tab=None):
+def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None):
     """
     Emit LLVM IR for bpf_map_lookup_elem helper function call.
     """
@@ -172,7 +172,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None)
                 ir.IntType(32), len(fmt_str))], tail=True)
 
 
-def bpf_map_update_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None, struct_sym_tab=None):
+def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None):
     """
     Emit LLVM IR for bpf_map_update_elem helper function call.
     Expected call signature: map.update(key, value, flags=0)
@@ -268,7 +268,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, local_sym_tab=No
     return result
 
 
-def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None, struct_sym_tab=None):
+def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None):
     """
     Emit LLVM IR for bpf_map_delete_elem helper function call.
     Expected call signature: map.delete(key)
@@ -340,8 +340,31 @@ def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local
     return pid
 
 
-def bpf_perf_event_output_handler(call, map_ptr, module, builder, local_sym_tab=None, struct_sym_tab=None):
-    pass
+def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+    if len(call.args) != 1:
+        raise ValueError("Perf event output expects exactly one argument (data), got "
+                         f"{len(call.args)}")
+    data_arg = call.args[0]
+    ctx_ptr = func.args[0]  # First argument to the function is ctx
+
+    if isinstance(data_arg, ast.Name):
+        data_name = data_arg.id
+        if local_sym_tab and data_name in local_sym_tab:
+            data_ptr = local_sym_tab[data_name]
+        else:
+            raise ValueError(
+                f"Data variable {data_name} not found in local symbol table.")
+        # Check is data_name is a struct
+        if local_var_metadata and data_name in local_var_metadata:
+            data_type = local_var_metadata[data_name]
+            if data_type in struct_sym_tab:
+                struct_info = struct_sym_tab[data_type]
+                data_size = 0
+                for field_type in struct_info["type"].elements:
+                    if isinstance(field_type, ir.IntType):
+                        data_size += field_type.width // 8
+                    elif isinstance(field_type, ir.PointerType):
+                        data_size += 8
 
 
 helper_func_list = {
@@ -355,7 +378,7 @@ helper_func_list = {
 }
 
 
-def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_tab=None, struct_sym_tab=None):
+def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
     if isinstance(call.func, ast.Name):
         func_name = call.func.id
         if func_name in helper_func_list:
@@ -372,14 +395,29 @@ def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_
             if map_sym_tab and map_name in map_sym_tab:
                 map_ptr = map_sym_tab[map_name]
                 if method_name in helper_func_list:
+                    print(local_var_metadata)
                     return helper_func_list[method_name](
-                        call, map_ptr, module, builder, local_sym_tab, struct_sym_tab)
+                        call, map_ptr, module, builder, func, local_sym_tab, struct_sym_tab, local_var_metadata)
                 else:
                     raise NotImplementedError(
                         f"Map method {method_name} is not implemented as a helper function.")
             else:
                 raise ValueError(
                     f"Map variable {map_name} not found in symbol tables.")
+        elif isinstance(call.func.value, ast.Name):
+            obj_name = call.func.value.id
+            method_name = call.func.attr
+            if map_sym_tab and obj_name in map_sym_tab:
+                map_ptr = map_sym_tab[obj_name]
+                if method_name in helper_func_list:
+                    return helper_func_list[method_name](
+                        call, map_ptr, module, builder, func, local_sym_tab, struct_sym_tab, local_var_metadata)
+                else:
+                    raise NotImplementedError(
+                        f"Map method {method_name} is not implemented as a helper function.")
+            else:
+                raise ValueError(
+                    f"Map variable {obj_name} not found in symbol tables.")
         else:
             raise NotImplementedError(
                 "Attribute not supported for map method calls.")
