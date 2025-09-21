@@ -9,6 +9,7 @@ import os
 import subprocess
 import inspect
 from pathlib import Path
+from pylibbpf import BpfProgram
 
 
 def find_bpf_chunks(tree):
@@ -116,3 +117,17 @@ def compile():
     ], check=True)
 
     print(f"Object written to {o_file}, {ll_file} can be removed")
+
+def BPF() -> BpfProgram:
+    caller_frame = inspect.stack()[1]
+    caller_file = Path(caller_frame.filename).resolve()
+    ll_file = Path("/tmp") / caller_file.with_suffix(".ll").name
+    o_file = Path("/tmp") / caller_file.with_suffix(".o").name
+    compile_to_ir(str(caller_file), str(ll_file))
+
+    subprocess.run([
+        "llc", "-march=bpf", "-filetype=obj", "-O2",
+        str(ll_file), "-o", str(o_file)
+    ], check=True)
+    
+    return BpfProgram(str(o_file))

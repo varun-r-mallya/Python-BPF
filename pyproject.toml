@@ -16,7 +16,8 @@ requires-python = ">=3.8"
 
 dependencies = [
   "llvmlite",
-  "astpretty"
+  "astpretty",
+  "pylibbpf"
 ]
 
 [tool.setuptools.packages.find]
