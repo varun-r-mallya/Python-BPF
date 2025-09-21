@@ -222,7 +222,7 @@ def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
         return None
 
 
-def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab):
+def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_sym_tab=None):
     """Handle if statements in the function body."""
     print("Handling if statement")
     start = builder.block.parent
@@ -243,7 +243,7 @@ def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab):
     builder.position_at_end(then_block)
     for s in stmt.body:
         process_stmt(func, module, builder, s,
-                     local_sym_tab, map_sym_tab, False)
+                     local_sym_tab, map_sym_tab, structs_sym_tab, False)
     if not builder.block.is_terminated:
         builder.branch(merge_block)
 
@@ -251,7 +251,7 @@ def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab):
         builder.position_at_end(else_block)
         for s in stmt.orelse:
             process_stmt(func, module, builder, s,
-                         local_sym_tab, map_sym_tab, False)
+                         local_sym_tab, map_sym_tab, structs_sym_tab, False)
         if not builder.block.is_terminated:
             builder.branch(merge_block)
 
@@ -269,7 +269,8 @@ def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, struct
     elif isinstance(stmt, ast.AugAssign):
         raise SyntaxError("Augmented assignment not supported")
     elif isinstance(stmt, ast.If):
-        handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab)
+        handle_if(func, module, builder, stmt, map_sym_tab,
+                  local_sym_tab, structs_sym_tab)
     elif isinstance(stmt, ast.Return):
         if stmt.value is None:
             builder.ret(ir.Constant(ir.IntType(32), 0))

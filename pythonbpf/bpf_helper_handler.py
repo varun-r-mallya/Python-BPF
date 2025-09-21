@@ -3,7 +3,7 @@ from llvmlite import ir
 from .expr_pass import eval_expr
 
 
-def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab=None):
+def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, local_var_metadata=None):
     """
     Emit LLVM IR for bpf_ktime_get_ns helper function call.
     """
@@ -16,7 +16,7 @@ def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab
     return result
 
 
-def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None):
+def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
     """
     Emit LLVM IR for bpf_map_lookup_elem helper function call.
     """
@@ -63,7 +63,7 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     return result
 
 
-def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None):
+def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, local_var_metadata=None):
     if not hasattr(func, "_fmt_counter"):
         func._fmt_counter = 0
 
@@ -172,7 +172,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None)
                 ir.IntType(32), len(fmt_str))], tail=True)
 
 
-def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None):
+def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
     """
     Emit LLVM IR for bpf_map_update_elem helper function call.
     Expected call signature: map.update(key, value, flags=0)
@@ -268,7 +268,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     return result
 
 
-def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None):
+def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
     """
     Emit LLVM IR for bpf_map_delete_elem helper function call.
     Expected call signature: map.delete(key)
@@ -323,7 +323,7 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     return result
 
 
-def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local_sym_tab=None):
+def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, local_var_metadata=None):
     """
     Emit LLVM IR for bpf_get_current_pid_tgid helper function call.
     """
