@@ -30,3 +30,6 @@ class PerfEventArray:
         self.key_type = key_size
         self.value_type = value_size
         self.entries = {}
+
+    def output(self, data):
+        pass  # Placeholder for output method

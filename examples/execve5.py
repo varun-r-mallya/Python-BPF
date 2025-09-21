@@ -27,6 +27,7 @@ def hello(ctx: c_void_p) -> c_int32:
     dataobj.pid = process_id
     dataobj.ts = ts
     print(f"clone called at {ts} by pid {process_id}")
+    events.output(dataobj)
     return c_int32(0)
 
 

@@ -340,6 +340,10 @@ def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local
     return pid
 
 
+def bpf_perf_event_output_handler(call, map_ptr, module, builder, local_sym_tab=None):
+    pass
+
+
 helper_func_list = {
     "lookup": bpf_map_lookup_elem_emitter,
     "print": bpf_printk_emitter,
@@ -347,6 +351,7 @@ helper_func_list = {
     "update": bpf_map_update_elem_emitter,
     "delete": bpf_map_delete_elem_emitter,
     "pid": bpf_get_current_pid_tgid_emitter,
+    "output": bpf_perf_event_output_handler,
 }
 
 
