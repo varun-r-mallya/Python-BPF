@@ -367,8 +367,8 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
             raise ValueError(
                 f"Metadata for variable {data_name} not found in local variable metadata.")
 
-        # BPF_F_CURRENT_CPU is 0
-        flags_val = ir.Constant(ir.IntType(64), 0)
+        # BPF_F_CURRENT_CPU is -1 in 32 bit
+        flags_val = ir.Constant(ir.IntType(64), 0xFFFFFFFF)
 
         map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
         data_void_ptr = builder.bitcast(data_ptr, ir.PointerType())
