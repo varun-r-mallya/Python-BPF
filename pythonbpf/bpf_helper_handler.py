@@ -16,7 +16,7 @@ def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab
     return result
 
 
-def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None):
+def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None, struct_sym_tab=None):
     """
     Emit LLVM IR for bpf_map_lookup_elem helper function call.
     """
@@ -172,7 +172,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None)
                 ir.IntType(32), len(fmt_str))], tail=True)
 
 
-def bpf_map_update_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None):
+def bpf_map_update_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None, struct_sym_tab=None):
     """
     Emit LLVM IR for bpf_map_update_elem helper function call.
     Expected call signature: map.update(key, value, flags=0)
@@ -268,7 +268,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, local_sym_tab=No
     return result
 
 
-def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None):
+def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, local_sym_tab=None, struct_sym_tab=None):
     """
     Emit LLVM IR for bpf_map_delete_elem helper function call.
     Expected call signature: map.delete(key)
@@ -340,7 +340,7 @@ def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local
     return pid
 
 
-def bpf_perf_event_output_handler(call, map_ptr, module, builder, local_sym_tab=None):
+def bpf_perf_event_output_handler(call, map_ptr, module, builder, local_sym_tab=None, struct_sym_tab=None):
     pass
 
 
@@ -355,7 +355,7 @@ helper_func_list = {
 }
 
 
-def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_tab=None):
+def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_tab=None, struct_sym_tab=None):
     if isinstance(call.func, ast.Name):
         func_name = call.func.id
         if func_name in helper_func_list:
@@ -373,7 +373,7 @@ def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_
                 map_ptr = map_sym_tab[map_name]
                 if method_name in helper_func_list:
                     return helper_func_list[method_name](
-                        call, map_ptr, module, builder, local_sym_tab)
+                        call, map_ptr, module, builder, local_sym_tab, struct_sym_tab)
                 else:
                     raise NotImplementedError(
                         f"Map method {method_name} is not implemented as a helper function.")

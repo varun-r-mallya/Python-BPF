@@ -100,7 +100,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                 # var = builder.alloca(ir.IntType(64), name=var_name)
                 # var.align = 8
                 val = handle_helper_call(
-                    rval, module, builder, None, local_sym_tab, map_sym_tab)
+                    rval, module, builder, None, local_sym_tab, map_sym_tab, structs_sym_tab)
                 builder.store(val, local_sym_tab[var_name])
                 # local_sym_tab[var_name] = var
                 print(f"Assigned constant {rval.func.id} to {var_name}")
@@ -139,7 +139,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                     map_ptr = map_sym_tab[map_name]
                     if method_name in helper_func_list:
                         val = handle_helper_call(
-                            rval, module, builder, func, local_sym_tab, map_sym_tab)
+                            rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab)
                         # var = builder.alloca(ir.IntType(64), name=var_name)
                         # var.align = 8
                         builder.store(val, local_sym_tab[var_name])
