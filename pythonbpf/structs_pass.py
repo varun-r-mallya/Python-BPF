@@ -31,9 +31,27 @@ def process_bpf_struct(cls_node, module):
             field_names.append(item.target.id)
             field_types.append(ctypes_to_ir(item.annotation.id))
 
+    curr_offset = 0
+    for ftype in field_types:
+        if isinstance(ftype, ir.IntType):
+            fsize = ftype.width // 8
+            alignment = fsize
+        elif isinstance(ftype, ir.PointerType):
+            fsize = 8
+            alignment = 8
+        else:
+            print(f"Unsupported field type in struct {struct_name}")
+            return
+        padding = (alignment - (curr_offset % alignment)) % alignment
+        curr_offset += padding
+        curr_offset += fsize
+    final_padding = (8 - (curr_offset % 8)) % 8
+    total_size = curr_offset + final_padding
+
     struct_type = ir.LiteralStructType(field_types)
     structs_sym_tab[struct_name] = {
         "type": struct_type,
-        "fields": {name: idx for idx, name in enumerate(field_names)}
+        "fields": {name: idx for idx, name in enumerate(field_names)},
+        "size": total_size
     }
     print(f"Created struct {struct_name} with fields {field_names}")

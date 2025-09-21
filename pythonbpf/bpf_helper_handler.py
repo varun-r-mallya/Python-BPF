@@ -359,12 +359,37 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
             data_type = local_var_metadata[data_name]
             if data_type in struct_sym_tab:
                 struct_info = struct_sym_tab[data_type]
-                data_size = 0
-                for field_type in struct_info["type"].elements:
-                    if isinstance(field_type, ir.IntType):
-                        data_size += field_type.width // 8
-                    elif isinstance(field_type, ir.PointerType):
-                        data_size += 8
+                size_val = ir.Constant(ir.IntType(64), struct_info["size"])
+            else:
+                raise ValueError(
+                    f"Struct type {data_type} for variable {data_name} not found in struct symbol table.")
+        else:
+            raise ValueError(
+                f"Metadata for variable {data_name} not found in local variable metadata.")
+
+        # BPF_F_CURRENT_CPU is 0
+        flags_val = ir.Constant(ir.IntType(64), 0)
+
+        map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
+        data_void_ptr = builder.bitcast(data_ptr, ir.PointerType())
+        fn_type = ir.FunctionType(
+            ir.IntType(64),
+            [ir.PointerType(ir.IntType(8)), ir.PointerType(), ir.IntType(64),
+             ir.PointerType(), ir.IntType(64)],
+            var_arg=False
+        )
+        fn_ptr_type = ir.PointerType(fn_type)
+
+        # helper id
+        fn_addr = ir.Constant(ir.IntType(64), 25)
+        fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
+
+        result = builder.call(
+            fn_ptr, [ctx_ptr, map_void_ptr, flags_val, data_void_ptr, size_val], tail=False)
+        return result
+    else:
+        raise NotImplementedError(
+            "Only simple object names are supported as data in perf event output.")
 
 
 helper_func_list = {
