@@ -75,6 +75,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
         exprs = []
 
         for value in call.args[0].values:
+            print("Value in f-string:", ast.dump(value))
             if isinstance(value, ast.Constant):
                 if isinstance(value.value, str):
                     fmt_parts.append(value.value)
@@ -86,10 +87,24 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                         "Only string and integer constants are supported in f-string.")
             elif isinstance(value, ast.FormattedValue):
                 print("Formatted value:", ast.dump(value))
-                # Assume int for now
+                # TODO: Dirty handling here, only checks for int or str
                 if isinstance(value.value, ast.Name):
-                    fmt_parts.append("%lld")
-                    exprs.append(value.value)
+                    if local_sym_tab and value.value.id in local_sym_tab:
+                        var_ptr, var_type = local_sym_tab[value.value.id]
+                        if isinstance(var_type, ir.IntType):
+                            fmt_parts.append("%lld")
+                            exprs.append(value.value)
+                        elif var_type == ir.PointerType(ir.IntType(8)):
+                            # Case with string
+                            fmt_parts.append("%s")
+                            exprs.append(value.value)
+                        else:
+                            raise NotImplementedError(
+                                "Only integer and pointer types are supported in formatted values.")
+                        print("Formatted value variable:", var_ptr, var_type)
+                    else:
+                        raise ValueError(
+                            f"Variable {value.value.id} not found in local symbol table.")
                 else:
                     raise NotImplementedError(
                         "Only simple variable names are supported in formatted values.")
