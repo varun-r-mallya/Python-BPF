@@ -10,6 +10,7 @@ from ctypes import c_void_p, c_int64, c_int32, c_uint64
 class data_t:
     pid: c_uint64
     ts: c_uint64
+    comm: str(16)
 
 
 @bpf
