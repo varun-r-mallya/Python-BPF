@@ -51,7 +51,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
 
             if field_name in struct_info["fields"]:
                 field_idx = struct_info["fields"][field_name]
-                struct_ptr = local_sym_tab[var_name]
+                struct_ptr = local_sym_tab[var_name][0]
                 field_ptr = builder.gep(
                     struct_ptr, [ir.Constant(ir.IntType(32), 0),
                                  ir.Constant(ir.IntType(32), field_idx)],
@@ -68,17 +68,17 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
         if isinstance(rval.value, bool):
             if rval.value:
                 builder.store(ir.Constant(ir.IntType(1), 1),
-                              local_sym_tab[var_name])
+                              local_sym_tab[var_name][0])
             else:
                 builder.store(ir.Constant(ir.IntType(1), 0),
-                              local_sym_tab[var_name])
+                              local_sym_tab[var_name][0])
             print(f"Assigned constant {rval.value} to {var_name}")
         elif isinstance(rval.value, int):
             # Assume c_int64 for now
             # var = builder.alloca(ir.IntType(64), name=var_name)
             # var.align = 8
             builder.store(ir.Constant(ir.IntType(64), rval.value),
-                          local_sym_tab[var_name])
+                          local_sym_tab[var_name][0])
             # local_sym_tab[var_name] = var
             print(f"Assigned constant {rval.value} to {var_name}")
         elif isinstance(rval.value, str):
@@ -92,7 +92,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
             global_str.initializer = str_const
             str_ptr = builder.bitcast(
                 global_str, ir.PointerType(ir.IntType(8)))
-            builder.store(str_ptr, local_sym_tab[var_name])
+            builder.store(str_ptr, local_sym_tab[var_name][0])
             print(f"Assigned string constant '{rval.value}' to {var_name}")
         else:
             print("Unsupported constant type")
@@ -105,7 +105,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                 # var = builder.alloca(ir_type, name=var_name)
                 # var.align = ir_type.width // 8
                 builder.store(ir.Constant(
-                    ir_type, rval.args[0].value), local_sym_tab[var_name])
+                    ir_type, rval.args[0].value), local_sym_tab[var_name][0])
                 print(f"Assigned {call_type} constant "
                       f"{rval.args[0].value} to {var_name}")
                 # local_sym_tab[var_name] = var
@@ -114,7 +114,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                 # var.align = 8
                 val = handle_helper_call(
                     rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
-                builder.store(val, local_sym_tab[var_name])
+                builder.store(val, local_sym_tab[var_name][0])
                 # local_sym_tab[var_name] = var
                 print(f"Assigned constant {rval.func.id} to {var_name}")
             elif call_type == "deref" and len(rval.args) == 1:
@@ -125,7 +125,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                     print("Failed to evaluate deref argument")
                     return
                 print(f"Dereferenced value: {val}, storing in {var_name}")
-                builder.store(val, local_sym_tab[var_name])
+                builder.store(val, local_sym_tab[var_name][0])
                 # local_sym_tab[var_name] = var
                 print(f"Dereferenced and assigned to {var_name}")
             elif call_type in structs_sym_tab and len(rval.args) == 0:
@@ -134,7 +134,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                 # var = builder.alloca(ir_type, name=var_name)
                 # Null init
                 builder.store(ir.Constant(ir_type, None),
-                              local_sym_tab[var_name])
+                              local_sym_tab[var_name][0])
                 local_var_metadata[var_name] = call_type
                 print(f"Assigned struct {call_type} to {var_name}")
                 # local_sym_tab[var_name] = var
@@ -155,7 +155,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                             rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
                         # var = builder.alloca(ir.IntType(64), name=var_name)
                         # var.align = 8
-                        builder.store(val, local_sym_tab[var_name])
+                        builder.store(val, local_sym_tab[var_name][0])
                         # local_sym_tab[var_name] = var
             else:
                 print("Unsupported assignment call structure")
@@ -179,7 +179,7 @@ def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
             return None
     elif isinstance(cond, ast.Name):
         if cond.id in local_sym_tab:
-            var = local_sym_tab[cond.id]
+            var = local_sym_tab[cond.id][0]
             val = builder.load(var)
             if val.type != ir.IntType(1):
                 # Convert nonzero values to true, zero to false
