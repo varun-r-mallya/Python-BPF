@@ -27,7 +27,7 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     if isinstance(key_arg, ast.Name):
         key_name = key_arg.id
         if local_sym_tab and key_name in local_sym_tab:
-            key_ptr = local_sym_tab[key_name]
+            key_ptr = local_sym_tab[key_name][0]
         else:
             raise ValueError(
                 f"Key variable {key_name} not found in local symbol table.")
@@ -190,7 +190,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     if isinstance(key_arg, ast.Name):
         key_name = key_arg.id
         if local_sym_tab and key_name in local_sym_tab:
-            key_ptr = local_sym_tab[key_name]
+            key_ptr = local_sym_tab[key_name][0]
         else:
             raise ValueError(
                 f"Key variable {key_name} not found in local symbol table.")
@@ -209,7 +209,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     if isinstance(value_arg, ast.Name):
         value_name = value_arg.id
         if local_sym_tab and value_name in local_sym_tab:
-            value_ptr = local_sym_tab[value_name]
+            value_ptr = local_sym_tab[value_name][0]
         else:
             raise ValueError(
                 f"Value variable {value_name} not found in local symbol table.")
@@ -232,7 +232,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
             flags_name = flags_arg.id
             if local_sym_tab and flags_name in local_sym_tab:
                 # Assume it's a stored integer value, load it
-                flags_ptr = local_sym_tab[flags_name]
+                flags_ptr = local_sym_tab[flags_name][0]
                 flags_val = builder.load(flags_ptr)
             else:
                 raise ValueError(
@@ -285,7 +285,7 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     if isinstance(key_arg, ast.Name):
         key_name = key_arg.id
         if local_sym_tab and key_name in local_sym_tab:
-            key_ptr = local_sym_tab[key_name]
+            key_ptr = local_sym_tab[key_name][0]
         else:
             raise ValueError(
                 f"Key variable {key_name} not found in local symbol table.")
@@ -351,7 +351,7 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
     if isinstance(data_arg, ast.Name):
         data_name = data_arg.id
         if local_sym_tab and data_name in local_sym_tab:
-            data_ptr = local_sym_tab[data_name]
+            data_ptr = local_sym_tab[data_name][0]
         else:
             raise ValueError(
                 f"Data variable {data_name} not found in local symbol table.")
