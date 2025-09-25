@@ -370,8 +370,14 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
                     var.align = ir_type.width // 8
                     print(
                         f"Pre-allocated variable {var_name} of type c_int64")
+                elif isinstance(rval.value, str):
+                    ir_type = ir.PointerType(ir.IntType(8))
+                    var = builder.alloca(ir_type, name=var_name)
+                    var.align = 8
+                    print(
+                        f"Pre-allocated variable {var_name} of type string")
                 else:
-                    print("Unsupported constant type")
+                    print(f"Unsupported constant type")
                     continue
             elif isinstance(rval, ast.BinOp):
                 # Assume c_int64 for now
