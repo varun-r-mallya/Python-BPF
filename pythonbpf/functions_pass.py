@@ -196,12 +196,12 @@ def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
             return None
     elif isinstance(cond, ast.Compare):
         lhs = eval_expr(func, module, builder, cond.left,
-                        local_sym_tab, map_sym_tab)
+                        local_sym_tab, map_sym_tab)[0]
         if len(cond.ops) != 1 or len(cond.comparators) != 1:
             print("Unsupported complex comparison")
             return None
         rhs = eval_expr(func, module, builder,
-                        cond.comparators[0], local_sym_tab, map_sym_tab)
+                        cond.comparators[0], local_sym_tab, map_sym_tab)[0]
         op = cond.ops[0]
 
         if lhs.type != rhs.type:
