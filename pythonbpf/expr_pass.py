@@ -3,7 +3,7 @@ from llvmlite import ir
 
 
 def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_sym_tab=None, local_var_metadata=None):
-    print(f"Evaluating expression: {expr}")
+    print(f"Evaluating expression: {ast.dump(expr)}")
     if isinstance(expr, ast.Name):
         if expr.id in local_sym_tab:
             var = local_sym_tab[expr.id][0]

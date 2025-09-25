@@ -121,7 +121,8 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                 "Warning: bpf_printk supports up to 3 arguments, extra arguments will be ignored.")
 
         for expr in exprs[:3]:
-            val = eval_expr(func, module, builder, expr, local_sym_tab, None)
+            val, _ = eval_expr(func, module, builder,
+                               expr, local_sym_tab, None)
             if val:
                 if isinstance(val.type, ir.PointerType):
                     val = builder.ptrtoint(val, ir.IntType(64))
@@ -137,7 +138,6 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                 print(
                     "Warning: Failed to evaluate expression for bpf_printk argument. It will be converted to 0.")
                 args.append(ir.Constant(ir.IntType(64), 0))
-
         fn_type = ir.FunctionType(ir.IntType(
             64), [ir.PointerType(), ir.IntType(32)], var_arg=True)
         fn_ptr_type = ir.PointerType(fn_type)

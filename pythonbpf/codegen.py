@@ -93,6 +93,7 @@ def compile_to_ir(filename: str, output: str):
 
     module.add_named_metadata("llvm.ident", ["llvmlite PythonBPF v0.0.1"])
 
+    print(f"IR written to {output}")
     with open(output, "w") as f:
         f.write(f"source_filename = \"{filename}\"\n")
         f.write(str(module))
@@ -118,6 +119,7 @@ def compile():
 
     print(f"Object written to {o_file}, {ll_file} can be removed")
 
+
 def BPF() -> BpfProgram:
     caller_frame = inspect.stack()[1]
     caller_file = Path(caller_frame.filename).resolve()
@@ -129,5 +131,5 @@ def BPF() -> BpfProgram:
         "llc", "-march=bpf", "-filetype=obj", "-O2",
         str(ll_file), "-o", str(o_file)
     ], check=True)
-    
+
     return BpfProgram(str(o_file))

@@ -61,7 +61,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                 if val is None:
                     print("Failed to evaluate struct field assignment")
                     return
-                builder.store(val, field_ptr)
+                builder.store(val[0], field_ptr)
                 print(f"Assigned to struct field {var_name}.{field_name}")
                 return
     elif isinstance(rval, ast.Constant):
@@ -114,7 +114,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                 # var.align = 8
                 val = handle_helper_call(
                     rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
-                builder.store(val, local_sym_tab[var_name][0])
+                builder.store(val[0], local_sym_tab[var_name][0])
                 # local_sym_tab[var_name] = var
                 print(f"Assigned constant {rval.func.id} to {var_name}")
             elif call_type == "deref" and len(rval.args) == 1:
@@ -125,7 +125,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                     print("Failed to evaluate deref argument")
                     return
                 print(f"Dereferenced value: {val}, storing in {var_name}")
-                builder.store(val, local_sym_tab[var_name][0])
+                builder.store(val[0], local_sym_tab[var_name][0])
                 # local_sym_tab[var_name] = var
                 print(f"Dereferenced and assigned to {var_name}")
             elif call_type in structs_sym_tab and len(rval.args) == 0:
@@ -155,7 +155,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                             rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
                         # var = builder.alloca(ir.IntType(64), name=var_name)
                         # var.align = 8
-                        builder.store(val, local_sym_tab[var_name][0])
+                        builder.store(val[0], local_sym_tab[var_name][0])
                         # local_sym_tab[var_name] = var
             else:
                 print("Unsupported assignment call structure")
@@ -462,7 +462,6 @@ def process_bpf_chunk(func_node, module, return_type, map_sym_tab, structs_sym_t
 
     process_func_body(module, builder, func_node, func,
                       ret_type, map_sym_tab, structs_sym_tab)
-
     return func
 
 
