@@ -6,7 +6,7 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
     print(f"Evaluating expression: {expr}")
     if isinstance(expr, ast.Name):
         if expr.id in local_sym_tab:
-            var = local_sym_tab[expr.id]
+            var = local_sym_tab[expr.id][0]
             val = builder.load(var)
             return val
         else:
@@ -37,7 +37,7 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
                     return None
                 if isinstance(arg, ast.Name):
                     if arg.id in local_sym_tab:
-                        arg = local_sym_tab[arg.id]
+                        arg = local_sym_tab[arg.id][0]
                     else:
                         print(f"Undefined variable {arg.id}")
                         return None
