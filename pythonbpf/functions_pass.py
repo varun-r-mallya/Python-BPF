@@ -81,6 +81,19 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                           local_sym_tab[var_name])
             # local_sym_tab[var_name] = var
             print(f"Assigned constant {rval.value} to {var_name}")
+        elif isinstance(rval.value, str):
+            str_val = rval.value.encode('utf-8') + b'\x00'
+            str_const = ir.Constant(ir.ArrayType(
+                ir.IntType(8), len(str_val)), bytearray(str_val))
+            global_str = ir.GlobalVariable(
+                module, str_const.type, name=f"{var_name}_str")
+            global_str.linkage = 'internal'
+            global_str.global_constant = True
+            global_str.initializer = str_const
+            str_ptr = builder.bitcast(
+                global_str, ir.PointerType(ir.IntType(8)))
+            builder.store(str_ptr, local_sym_tab[var_name])
+            print(f"Assigned string constant '{rval.value}' to {var_name}")
         else:
             print("Unsupported constant type")
     elif isinstance(rval, ast.Call):
@@ -389,7 +402,7 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
             else:
                 print("Unsupported assignment value type")
                 continue
-            local_sym_tab[var_name] = var
+            local_sym_tab[var_name] = (var, ir_type)
     return local_sym_tab
 
 
