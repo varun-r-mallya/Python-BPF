@@ -13,7 +13,7 @@ def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab
     fn_ptr_type = ir.PointerType(fn_type)
     fn_ptr = builder.inttoptr(helper_id, fn_ptr_type)
     result = builder.call(fn_ptr, [], tail=False)
-    return result
+    return result, ir.IntType(64)
 
 
 def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
@@ -60,7 +60,7 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
 
     result = builder.call(fn_ptr, [map_void_ptr, key_ptr], tail=False)
 
-    return result
+    return result, ir.PointerType()
 
 
 def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, local_var_metadata=None):
@@ -87,8 +87,8 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
             elif isinstance(value, ast.FormattedValue):
                 print("Formatted value:", ast.dump(value))
                 # Assume int for now
-                fmt_parts.append("%lld")
                 if isinstance(value.value, ast.Name):
+                    fmt_parts.append("%lld")
                     exprs.append(value.value)
                 else:
                     raise NotImplementedError(
@@ -266,7 +266,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     result = builder.call(
         fn_ptr, [map_void_ptr, key_ptr, value_ptr, flags_const], tail=False)
 
-    return result
+    return result, None
 
 
 def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
@@ -321,7 +321,7 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     # Call the helper function
     result = builder.call(fn_ptr, [map_void_ptr, key_ptr], tail=False)
 
-    return result
+    return result, None
 
 
 def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, local_var_metadata=None):
@@ -338,7 +338,7 @@ def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local
     # Extract the lower 32 bits (PID) using bitwise AND with 0xFFFFFFFF
     mask = ir.Constant(ir.IntType(64), 0xFFFFFFFF)
     pid = builder.and_(result, mask)
-    return pid
+    return pid, ir.IntType(64)
 
 
 def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
@@ -387,7 +387,7 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
 
         result = builder.call(
             fn_ptr, [ctx_ptr, map_void_ptr, flags_val, data_void_ptr, size_val], tail=False)
-        return result
+        return result, None
     else:
         raise NotImplementedError(
             "Only simple object names are supported as data in perf event output.")
