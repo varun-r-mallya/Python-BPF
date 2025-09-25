@@ -22,13 +22,13 @@ def events() -> PerfEventArray:
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")
 def hello(ctx: c_void_p) -> c_int32:
-    strobj = "Hi"
     dataobj = data_t()
     ts = ktime()
     process_id = pid()
+    strobj = "hellohellohello"
     dataobj.pid = process_id
     dataobj.ts = ts
-    print(f"clone called at {ts} by pid {process_id}, str is {strobj}")
+    print(f"clone called at {ts} by pid {process_id}, comm {strobj}")
     events.output(dataobj)
     return c_int32(0)
 
