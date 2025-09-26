@@ -13,7 +13,7 @@ def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab
     fn_ptr_type = ir.PointerType(fn_type)
     fn_ptr = builder.inttoptr(helper_id, fn_ptr_type)
     result = builder.call(fn_ptr, [], tail=False)
-    return result
+    return result, ir.IntType(64)
 
 
 def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
@@ -60,7 +60,7 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
 
     result = builder.call(fn_ptr, [map_void_ptr, key_ptr], tail=False)
 
-    return result
+    return result, ir.PointerType()
 
 
 def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, local_var_metadata=None):
@@ -75,6 +75,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
         exprs = []
 
         for value in call.args[0].values:
+            print("Value in f-string:", ast.dump(value))
             if isinstance(value, ast.Constant):
                 if isinstance(value.value, str):
                     fmt_parts.append(value.value)
@@ -86,10 +87,24 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                         "Only string and integer constants are supported in f-string.")
             elif isinstance(value, ast.FormattedValue):
                 print("Formatted value:", ast.dump(value))
-                # Assume int for now
-                fmt_parts.append("%lld")
+                # TODO: Dirty handling here, only checks for int or str
                 if isinstance(value.value, ast.Name):
-                    exprs.append(value.value)
+                    if local_sym_tab and value.value.id in local_sym_tab:
+                        var_ptr, var_type = local_sym_tab[value.value.id]
+                        if isinstance(var_type, ir.IntType):
+                            fmt_parts.append("%lld")
+                            exprs.append(value.value)
+                        elif var_type == ir.PointerType(ir.IntType(8)):
+                            # Case with string
+                            fmt_parts.append("%s")
+                            exprs.append(value.value)
+                        else:
+                            raise NotImplementedError(
+                                "Only integer and pointer types are supported in formatted values.")
+                        print("Formatted value variable:", var_ptr, var_type)
+                    else:
+                        raise ValueError(
+                            f"Variable {value.value.id} not found in local symbol table.")
                 else:
                     raise NotImplementedError(
                         "Only simple variable names are supported in formatted values.")
@@ -121,7 +136,8 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                 "Warning: bpf_printk supports up to 3 arguments, extra arguments will be ignored.")
 
         for expr in exprs[:3]:
-            val = eval_expr(func, module, builder, expr, local_sym_tab, None)
+            val, _ = eval_expr(func, module, builder,
+                               expr, local_sym_tab, None)
             if val:
                 if isinstance(val.type, ir.PointerType):
                     val = builder.ptrtoint(val, ir.IntType(64))
@@ -137,7 +153,6 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                 print(
                     "Warning: Failed to evaluate expression for bpf_printk argument. It will be converted to 0.")
                 args.append(ir.Constant(ir.IntType(64), 0))
-
         fn_type = ir.FunctionType(ir.IntType(
             64), [ir.PointerType(), ir.IntType(32)], var_arg=True)
         fn_ptr_type = ir.PointerType(fn_type)
@@ -266,7 +281,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     result = builder.call(
         fn_ptr, [map_void_ptr, key_ptr, value_ptr, flags_const], tail=False)
 
-    return result
+    return result, None
 
 
 def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
@@ -321,7 +336,7 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     # Call the helper function
     result = builder.call(fn_ptr, [map_void_ptr, key_ptr], tail=False)
 
-    return result
+    return result, None
 
 
 def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, local_var_metadata=None):
@@ -338,7 +353,7 @@ def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local
     # Extract the lower 32 bits (PID) using bitwise AND with 0xFFFFFFFF
     mask = ir.Constant(ir.IntType(64), 0xFFFFFFFF)
     pid = builder.and_(result, mask)
-    return pid
+    return pid, ir.IntType(64)
 
 
 def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
@@ -387,7 +402,7 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
 
         result = builder.call(
             fn_ptr, [ctx_ptr, map_void_ptr, flags_val, data_void_ptr, size_val], tail=False)
-        return result
+        return result, None
     else:
         raise NotImplementedError(
             "Only simple object names are supported as data in perf event output.")

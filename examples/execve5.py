@@ -10,6 +10,7 @@ from ctypes import c_void_p, c_int64, c_int32, c_uint64
 class data_t:
     pid: c_uint64
     ts: c_uint64
+    comm: str(16)
 
 
 @bpf
@@ -21,13 +22,14 @@ def events() -> PerfEventArray:
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")
 def hello(ctx: c_void_p) -> c_int32:
-    strobj = "Hi"
     dataobj = data_t()
     ts = ktime()
     process_id = pid()
+    strobj = "hellohellohello"
     dataobj.pid = process_id
     dataobj.ts = ts
-    print(f"clone called at {ts} by pid {process_id}")
+    # dataobj.comm = strobj
+    print(f"clone called at {ts} by pid {process_id}, comm {strobj}")
     events.output(dataobj)
     return c_int32(0)
 
