@@ -58,9 +58,17 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                     inbounds=True)
                 val = eval_expr(func, module, builder, rval,
                                 local_sym_tab, map_sym_tab, structs_sym_tab)
+                if isinstance(struct_info["field_types"][field_idx], ir.ArrayType) and val[1] == ir.PointerType(ir.IntType(8)):
+                    # TODO: Figure it out, not a priority rn
+                    # Special case for string assignment to char array
+                    #str_len = struct_info["field_types"][field_idx].count
+                    #assign_string_to_array(builder, field_ptr, val[0], str_len)
+                    #print(f"Assigned to struct field {var_name}.{field_name}")
+                    pass
                 if val is None:
                     print("Failed to evaluate struct field assignment")
                     return
+                print(field_ptr)
                 builder.store(val[0], field_ptr)
                 print(f"Assigned to struct field {var_name}.{field_name}")
                 return
@@ -537,3 +545,46 @@ def infer_return_type(func_node: ast.FunctionDef):
                 raise ValueError("Conflicting return types:"
                                  f"{found_type} vs {t}")
     return found_type or "None"
+
+# For string assignment to fixed-size arrays
+def assign_string_to_array(builder, target_array_ptr, source_string_ptr, array_length):
+    """
+    Copy a string (i8*) to a fixed-size array ([N x i8]*)
+    """
+    # Create a loop to copy characters one by one
+    entry_block = builder.block
+    copy_block = builder.append_basic_block("copy_char")
+    end_block = builder.append_basic_block("copy_end")
+    
+    # Create loop counter
+    i = builder.alloca(ir.IntType(32))
+    builder.store(ir.Constant(ir.IntType(32), 0), i)
+    
+    # Start the loop
+    builder.branch(copy_block)
+    
+    # Copy loop
+    builder.position_at_end(copy_block)
+    idx = builder.load(i)
+    in_bounds = builder.icmp_unsigned('<', idx, ir.Constant(ir.IntType(32), array_length))
+    builder.cbranch(in_bounds, copy_block, end_block)
+    
+    with builder.if_then(in_bounds):
+        # Load character from source
+        src_ptr = builder.gep(source_string_ptr, [idx])
+        char = builder.load(src_ptr)
+        
+        # Store character in target
+        dst_ptr = builder.gep(target_array_ptr, [ir.Constant(ir.IntType(32), 0), idx])
+        builder.store(char, dst_ptr)
+        
+        # Increment counter
+        next_idx = builder.add(idx, ir.Constant(ir.IntType(32), 1))
+        builder.store(next_idx, i)
+    
+    builder.position_at_end(end_block)
+    
+    # Ensure null termination
+    last_idx = ir.Constant(ir.IntType(32), array_length - 1)
+    null_ptr = builder.gep(target_array_ptr, [ir.Constant(ir.IntType(32), 0), last_idx])
+    builder.store(ir.Constant(ir.IntType(8), 0), null_ptr)

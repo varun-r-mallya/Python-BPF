@@ -63,6 +63,7 @@ def process_bpf_struct(cls_node, module):
     structs_sym_tab[struct_name] = {
         "type": struct_type,
         "fields": {name: idx for idx, name in enumerate(field_names)},
-        "size": total_size
+        "size": total_size,
+        "field_types": field_types,
     }
     print(f"Created struct {struct_name} with fields {field_names}")
