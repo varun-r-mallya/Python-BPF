@@ -4,6 +4,7 @@ from llvmlite import ir
 
 def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_sym_tab=None, local_var_metadata=None):
     print(f"Evaluating expression: {ast.dump(expr)}")
+    print(local_var_metadata)
     if isinstance(expr, ast.Name):
         if expr.id in local_sym_tab:
             var = local_sym_tab[expr.id][0]
@@ -66,6 +67,25 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
                     if method_name in helper_func_list:
                         return handle_helper_call(
                             expr, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
+    elif isinstance(expr, ast.Attribute):
+        if isinstance(expr.value, ast.Name):
+            var_name = expr.value.id
+            attr_name = expr.attr
+            if var_name in local_sym_tab:
+                var_ptr, var_type = local_sym_tab[var_name]
+                print(f"Loading attribute "
+                      f"{attr_name} from variable {var_name}")
+                print(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
+                print(local_var_metadata)
+                if local_var_metadata and var_name in local_var_metadata:
+                    metadata = structs_sym_tab[local_var_metadata[var_name]]
+                    if attr_name in metadata["fields"]:
+                        field_idx = metadata["fields"][attr_name]
+                        gep = builder.gep(var_ptr, [ir.Constant(ir.IntType(32), 0),
+                                                    ir.Constant(ir.IntType(32), field_idx)])
+                        val = builder.load(gep)
+                        field_type = metadata["field_types"][field_idx]
+                        return val, field_type
     print("Unsupported expression evaluation")
     return None
 
@@ -73,6 +93,7 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
 def handle_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata):
     """Handle expression statements in the function body."""
     print(f"Handling expression: {ast.dump(expr)}")
+    print(local_var_metadata)
     call = expr.value
     if isinstance(call, ast.Call):
         eval_expr(func, module, builder, call, local_sym_tab,

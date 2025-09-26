@@ -282,6 +282,7 @@ def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_s
 def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, structs_sym_tab, did_return, ret_type=ir.IntType(64)):
     print(f"Processing statement: {ast.dump(stmt)}")
     if isinstance(stmt, ast.Expr):
+        print(local_var_metadata)
         handle_expr(func, module, builder, stmt, local_sym_tab,
                     map_sym_tab, structs_sym_tab, local_var_metadata)
     elif isinstance(stmt, ast.Assign):

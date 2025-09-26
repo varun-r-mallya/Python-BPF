@@ -26,10 +26,10 @@ def hello(ctx: c_void_p) -> c_int32:
     ts = ktime()
     process_id = pid()
     strobj = "hellohellohello"
-    dataobj.pid = process_id
-    dataobj.ts = ts
+    dataobj.pid = pid()
+    dataobj.ts = ktime()
     # dataobj.comm = strobj
-    print(f"clone called at {ts} by pid {process_id}, comm {strobj}")
+    print(f"clone called at {dataobj.ts} by pid {dataobj.pid}, comm {strobj}")
     events.output(dataobj)
     return c_int32(0)
 
