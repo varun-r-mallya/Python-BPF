@@ -6,3 +6,4 @@
 __pycache__/
 *.ll
 *.o
+.ipynb_checkpoints/

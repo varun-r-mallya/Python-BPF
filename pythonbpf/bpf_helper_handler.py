@@ -151,12 +151,12 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
         fmt_gvar = ir.GlobalVariable(
             module, ir.ArrayType(ir.IntType(8), len(fmt_str)), name=fmt_name)
         fmt_gvar.global_constant = True
-        fmt_gvar.initializer = ir.Constant(
+        fmt_gvar.initializer = ir.Constant(                 # type: ignore
             ir.ArrayType(ir.IntType(8), len(fmt_str)),
             bytearray(fmt_str.encode("utf8"))
         )
         fmt_gvar.linkage = "internal"
-        fmt_gvar.align = 1
+        fmt_gvar.align = 1              # type: ignore
 
         fmt_ptr = builder.bitcast(fmt_gvar, ir.PointerType())
 
