@@ -1,77 +1,183 @@
 # Python-BPF
-<p align="center">
-<a href="https://www.python.org/downloads/release/python-3080/"><img src="https://img.shields.io/badge/python-3.8-blue.svg"></a>
-<a href="https://pypi.org/project/pythonbpf"><img src="https://badge.fury.io/py/pythonbpf.svg"></a>
-</p>
 
-This is an LLVM IR generator for eBPF programs in Python. We use llvmlite to generate LLVM IR from pure Python. This is then compiled to LLVM object files, which can be loaded into the kernel for execution. We do not rely on BCC to do our compilation.
+Python-BPF is an LLVM IR generator for eBPF programs written in Python. It uses [llvmlite](https://github.com/numba/llvmlite) to generate LLVM IR and then compiles to LLVM object files. These object files can be loaded into the kernel for execution. Unlike BCC, Python-BPF performs compilation without relying on its infrastructure.
 
-# DO NOT USE IN PRODUCTION. IN DEVELOPMENT.
+> **Note**: This project is under active development and not ready for production use.
 
-## Video Demo
-[Video demo for code under demo/](https://youtu.be/eMyLW8iWbks)
+---
 
-## Slide Deck
-[Slide deck explaining the project](https://docs.google.com/presentation/d/1DsWDIVrpJhM4RgOETO9VWqUtEHo3-c7XIWmNpi6sTSo/edit?usp=sharing)
+## Overview
 
-##  Installation
-- Have `clang` installed.
-- `pip install pythonbpf`
+* Generate eBPF programs directly from Python.
+* Compile to LLVM object files for kernel execution.
+* Built with `llvmlite` for IR generation.
+* Supports maps, helpers, and global definitions for BPF.
+* Companion project: [pylibbpf](https://github.com/pythonbpf/pylibbpf), which provides the bindings required for object loading and execution.
 
-## Usage
+---
+
+## Installation
+
+Dependencies:
+
+* `clang`
+* Python ≥ 3.8
+
+Install via pip:
+
+```bash
+pip install pythonbpf pylibbpf
+```
+
+---
+
+## Example Usage
+
 ```python
-# pythonbpf_example.py
-from pythonbpf import bpf, map, bpfglobal, section, compile
-from pythonbpf.helpers import bpf_ktime_get_ns
+import time
+from pythonbpf import bpf, map, section, bpfglobal, BPF
+from pythonbpf.helpers import pid
 from pythonbpf.maps import HashMap
+from pylibbpf import *
+from ctypes import c_void_p, c_int64, c_uint64, c_int32
+import matplotlib.pyplot as plt
 
-from ctypes import c_void_p, c_int64, c_int32, c_uint64
+# This program attaches an eBPF tracepoint to sys_enter_clone,
+# counts per-PID clone syscalls, stores them in a hash map,
+# and then plots the distribution as a histogram using matplotlib.
+# It provides a quick view of process creation activity over 10 seconds.
 
 @bpf
 @map
-def last() -> HashMap:
-    return HashMap(key=c_uint64, value=c_uint64, max_entries=1)
+def hist() -> HashMap:
+    return HashMap(key=c_int32, value=c_uint64, max_entries=4096)
 
 @bpf
-@section("tracepoint/syscalls/sys_enter_execve")
-def hello(ctx: c_void_p) -> c_int32:
-    print("entered")
-    return c_int32(0)
-
-@bpf
-@section("tracepoint/syscalls/sys_exit_execve")
-def hello_again(ctx: c_void_p) -> c_int64:
-    print("exited")
-    key = 0
-    tsp = last().lookup(key)
-    print(tsp)
-    ts = bpf_ktime_get_ns()
+@section("tracepoint/syscalls/sys_enter_clone")
+def hello(ctx: c_void_p) -> c_int64:
+    process_id = pid()
+    one = 1
+    prev = hist().lookup(process_id)
+    if prev:
+        previous_value = prev + 1
+        print(f"count: {previous_value} with {process_id}")
+        hist().update(process_id, previous_value)
+        return c_int64(0)
+    else:
+        hist().update(process_id, one)
     return c_int64(0)
+
 
 @bpf
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
 
-def some_normal_function():
-    print("normal function")
 
-# compiles and dumps object file in the same directory
-compile()
+b = BPF()
+b.load_and_attach()
+hist = BpfMap(b, hist)
+print("Recording")
+time.sleep(10)
+
+counts = list(hist.values())
+
+plt.hist(counts, bins=20)
+plt.xlabel("Clone calls per PID")
+plt.ylabel("Frequency")
+plt.title("Syscall clone counts")
+plt.show()
 ```
-- Run `python pythonbpf_example.py` to get the compiled object file that can be then loaded into the kernel.
+---
+
+## Architecture
+
+Python-BPF provides a complete pipeline to write, compile, and load eBPF programs in Python:
+
+1. **Python Source Code**
+
+   * Users write BPF programs in Python using decorators like `@bpf`, `@map`, `@section`, and `@bpfglobal`.
+   * Maps (hash maps), helpers (e.g., `ktime`, `deref`), and tracepoints are defined using Python constructs, preserving a syntax close to standard Python.
+
+2. **AST Generation**
+
+   * The Python `ast` module parses the source code into an Abstract Syntax Tree (AST).
+   * Decorators and type annotations are captured to determine BPF maps, tracepoints, and global variables.
+
+3. **LLVM IR Emission**
+
+   * The AST is transformed into LLVM Intermediate Representation (IR) using `llvmlite`.
+   * IR captures BPF maps, control flow, assignments, and calls to helper functions.
+   * Debug information is emitted for easier inspection.
+
+4. **LLVM Object File Compilation**
+
+   * The LLVM IR (`.ll`) is compiled into a BPF target object file (`.o`) using `llc -march=bpf -O2`.
+   * This produces a kernel-loadable ELF object file containing the BPF bytecode.
+
+5. **libbpf Integration (via pylibbpf)**
+
+   * The compiled object file can be loaded into the kernel using `pylibbpf`.
+   * Maps, tracepoints, and program sections are initialized, and helper functions are resolved.
+   * Programs are attached to kernel hooks (e.g., syscalls) for execution.
+
+6. **Execution in Kernel**
+
+   * The kernel executes the loaded eBPF program.
+   * Hash maps, helpers, and global variables behave as defined in the Python source.
+   * Output can be read via BPF maps, helper functions, or trace printing.
+
+This architecture eliminates the need for embedding C code in Python, allowing full Python tooling support while generating true BPF object files ready for kernel execution.
+
+---
 
 ## Development
-- Make a virtual environment and activate it using `python3 -m venv .venv && source .venv/bin/activate`.  
-- Run `make install` to install the required dependencies.  
-- Run `make` to see the compilation output of the example.  
-- Run `check.sh` to check if generated object file passes through the verifier inside the examples directory.  
-- Run `make` in the `examples/c-form` directory to modify the example C BPF program to check the actual LLVM IR generated by clang.
 
-### Development Notes
-- Run ` ./check.sh check execve2.o;` in examples folder to check if the object code passes the verifier.
-- Run ` ./check.sh run execve2.o;` in examples folder to run the object code using `bpftool`.
+1. Create a virtual environment and activate it:
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   make install
+   ```
+
+3. Build and test examples:
+
+   ```bash
+   make
+   ```
+
+4. Verify an object file with the kernel verifier:
+
+   ```bash
+   ./check.sh check execve2.o
+   ```
+
+5. Run an object file using `bpftool`:
+
+   ```bash
+   ./check.sh run execve2.o
+   ```
+
+6. Explore LLVM IR output from clang in `examples/c-form` by running `make`.
+
+---
+
+## Resources
+
+* [Video demonstration](https://youtu.be/eMyLW8iWbks)
+* [Slide deck](https://docs.google.com/presentation/d/1DsWDIVrpJhM4RgOETO9VWqUtEHo3-c7XIWmNpi6sTSo/edit?usp=sharing)
+
+---
 
 ## Authors
-- [@r41k0u](https://github.com/r41k0u)
-- [@varun-r-mallya](https://github.com/varun-r-mallya)
+
+* [@r41k0u](https://github.com/r41k0u)
+* [@varun-r-mallya](https://github.com/varun-r-mallya)
+
+---
