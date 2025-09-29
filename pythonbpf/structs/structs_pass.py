@@ -1,7 +1,7 @@
 import ast
 import logging
 from llvmlite import ir
-from .type_deducer import ctypes_to_ir
+from pythonbpf.type_deducer import ctypes_to_ir
 from .struct_type import StructType
 
 logger = logging.getLogger(__name__)
