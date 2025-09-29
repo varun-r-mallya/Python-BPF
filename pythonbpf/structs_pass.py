@@ -2,22 +2,22 @@ import ast
 from llvmlite import ir
 from .type_deducer import ctypes_to_ir
 
-structs_sym_tab = {}
+
+def is_bpf_struct(cls_node):
+    return any(
+        isinstance(decorator, ast.Name) and decorator.id == "struct"
+        for decorator in cls_node.decorator_list
+    )
 
 
 def structs_proc(tree, module, chunks):
     """ Process all class definitions to find BPF structs """
+    structs_sym_tab = {}
     for cls_node in chunks:
-        # Check if this class is a struct
-        is_struct = False
-        for decorator in cls_node.decorator_list:
-            if isinstance(decorator, ast.Name) and decorator.id == "struct":
-                is_struct = True
-                break
-        if is_struct:
+        if is_bpf_struct(cls_node):
             print(f"Found BPF struct: {cls_node.name}")
-            process_bpf_struct(cls_node, module)
-            continue
+            struct_info = process_bpf_struct(cls_node, module)
+            structs_sym_tab[cls_node.name] = struct_info
     return structs_sym_tab
 
 
