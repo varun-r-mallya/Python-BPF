@@ -22,8 +22,10 @@ class StructType:
     def field_size(self, field_name):
         fld = self.fields[field_name]
         if isinstance(fld, ir.ArrayType):
-            return fld.element.count * (fld.element.width // 8)
+            return fld.count * (fld.element.width // 8)
         elif isinstance(fld, ir.IntType):
             return fld.width // 8
         elif isinstance(fld, ir.PointerType):
             return 8
+
+        raise TypeError(f"Unsupported field type: {fld}")
