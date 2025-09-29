@@ -79,12 +79,10 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
                 print(local_var_metadata)
                 if local_var_metadata and var_name in local_var_metadata:
                     metadata = structs_sym_tab[local_var_metadata[var_name]]
-                    if attr_name in metadata["fields"]:
-                        field_idx = metadata["fields"][attr_name]
-                        gep = builder.gep(var_ptr, [ir.Constant(ir.IntType(32), 0),
-                                                    ir.Constant(ir.IntType(32), field_idx)])
+                    if attr_name in metadata.fields:
+                        gep = metadata.gep(builder, var_ptr, attr_name)
                         val = builder.load(gep)
-                        field_type = metadata["field_types"][field_idx]
+                        field_type = metadata.field_type(attr_name)
                         return val, field_type
     print("Unsupported expression evaluation")
     return None
