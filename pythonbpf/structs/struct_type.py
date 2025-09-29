@@ -8,7 +8,7 @@ class StructType:
         self.size = size
 
     def field_idx(self, field_name):
-        return self.fields.keys().index(field_name)
+        return list(self.fields.keys()).index(field_name)
 
     def field_type(self, field_name):
         return self.fields[field_name]

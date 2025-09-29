@@ -2,6 +2,7 @@ import ast
 import logging
 from llvmlite import ir
 from .type_deducer import ctypes_to_ir
+from .struct_type import StructType
 
 logger = logging.getLogger(__name__)
 
@@ -35,14 +36,11 @@ def process_bpf_struct(cls_node, module):
     """ Process a single BPF struct definition """
 
     fields = parse_struct_fields(cls_node)
-    total_size = calc_struct_size(fields.values())
-    struct_type = ir.LiteralStructType(fields.values())
+    field_types = list(fields.values())
+    total_size = calc_struct_size(field_types)
+    struct_type = ir.LiteralStructType(field_types)
     logger.info(f"Created struct {cls_node.name} with fields {fields.keys()}")
-    return {
-        "type": struct_type,
-        "fields": fields,
-        "size": total_size,
-    }
+    return StructType(struct_type, fields, total_size)
 
 
 def parse_struct_fields(cls_node):
