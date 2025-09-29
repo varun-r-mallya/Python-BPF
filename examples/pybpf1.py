@@ -1,0 +1,41 @@
+from pythonbpf import bpf, map, section, bpfglobal, compile
+from pythonbpf.helpers import XDP_PASS
+from pythonbpf.maps import HashMap
+
+from ctypes import c_void_p, c_int64
+
+# Instructions to how to run this program
+# 1. Install PythonBPF: pip install pythonbpf
+# 2. Run the program: python demo/pybpf1.py
+# 3. Run the program with sudo: sudo examples/check.sh run demo/pybpf1.o
+# 4. Attach object file to any network device with something like ./check.sh xdp ../demo/pybpf1.o tailscale0
+# 5. send traffic through the device and observe effects
+
+@bpf
+@map
+def count() -> HashMap:
+    return HashMap(key=c_int64, value=c_int64, max_entries=1)
+
+
+@bpf
+@section("xdp")
+def hello_world(ctx: c_void_p) -> c_int64:
+    key = 0
+    one = 1
+    prev = count().lookup(key)
+    if prev:
+        prevval = prev + 1
+        print(f"count: {prevval}")
+        count().update(key, prevval)
+        return XDP_PASS
+    else:
+        count().update(key, one)
+
+    return XDP_PASS
+
+@bpf
+@bpfglobal
+def LICENSE() -> str:
+    return "GPL"
+
+compile()
