@@ -113,9 +113,9 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                             var_type = local_var_metadata[var_name]
                             if var_type in struct_sym_tab:
                                 struct_info = struct_sym_tab[var_type]
-                                if field_name in struct_info["fields"]:
-                                    field_index = struct_info["fields"][field_name]
-                                    field_type = struct_info["field_types"][field_index]
+                                if field_name in struct_info.fields:
+                                    field_type = struct_info.field_type(
+                                        field_name)
                                     if isinstance(field_type, ir.IntType):
                                         fmt_parts.append("%lld")
                                         exprs.append(value.value)
@@ -408,7 +408,7 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
             data_type = local_var_metadata[data_name]
             if data_type in struct_sym_tab:
                 struct_info = struct_sym_tab[data_type]
-                size_val = ir.Constant(ir.IntType(64), struct_info["size"])
+                size_val = ir.Constant(ir.IntType(64), struct_info.size)
             else:
                 raise ValueError(
                     f"Struct type {data_type} for variable {data_name} not found in struct symbol table.")
