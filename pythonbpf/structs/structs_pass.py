@@ -34,32 +34,29 @@ def is_bpf_struct(cls_node):
 def process_bpf_struct(cls_node, module):
     """ Process a single BPF struct definition """
 
-    field_names, field_types = parse_struct_fields(cls_node)
-    total_size = calc_struct_size(field_types)
-    struct_type = ir.LiteralStructType(field_types)
-    logger.info(f"Created struct {cls_node.name} with fields {field_names}")
+    fields = parse_struct_fields(cls_node)
+    total_size = calc_struct_size(fields.values())
+    struct_type = ir.LiteralStructType(fields.values())
+    logger.info(f"Created struct {cls_node.name} with fields {fields.keys()}")
     return {
         "type": struct_type,
-        "fields": {name: idx for idx, name in enumerate(field_names)},
+        "fields": fields,
         "size": total_size,
-        "field_types": field_types,
     }
 
 
 def parse_struct_fields(cls_node):
     """ Parse fields of a struct class node """
-    field_names = []
-    field_types = []
+    fields = {}
 
     for item in cls_node.body:
         if isinstance(item, ast.AnnAssign) and \
            isinstance(item.target, ast.Name):
-            field_names.append(item.target.id)
-            field_types.append(get_type_from_ann(item.annotation))
+            fields[item.target.id] = get_type_from_ann(item.annotation)
         else:
             logger.error(f"Unsupported struct field: {ast.dump(item)}")
             raise TypeError(f"Unsupported field in {ast.dump(cls_node)}")
-    return field_names, field_types
+    return fields
 
 
 def get_type_from_ann(annotation):
@@ -67,10 +64,12 @@ def get_type_from_ann(annotation):
     if isinstance(annotation, ast.Call) and \
        isinstance(annotation.func, ast.Name):
         if annotation.func.id == "str":
+            # Char array
             # Assumes constant integer argument
             length = annotation.args[0].value
             return ir.ArrayType(ir.IntType(8), length)
     elif isinstance(annotation, ast.Name):
+        # Int type, written as c_int64, c_uint32, etc.
         return ctypes_to_ir(annotation.id)
 
     raise TypeError(f"Unsupported annotation type: {ast.dump(annotation)}")
@@ -87,6 +86,7 @@ def calc_struct_size(field_types):
             fsize = ftype.count * (ftype.element.width // 8)
             alignment = ftype.element.width // 8
         elif isinstance(ftype, ir.PointerType):
+            # We won't encounter this rn, but for the future
             fsize = 8
             alignment = 8
         else:
