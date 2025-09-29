@@ -1,13 +1,9 @@
 import ast
+import logging
 from llvmlite import ir
 from .type_deducer import ctypes_to_ir
 
-
-def is_bpf_struct(cls_node):
-    return any(
-        isinstance(decorator, ast.Name) and decorator.id == "struct"
-        for decorator in cls_node.decorator_list
-    )
+logger = logging.getLogger(__name__)
 
 
 def structs_proc(tree, module, chunks):
@@ -19,6 +15,13 @@ def structs_proc(tree, module, chunks):
             struct_info = process_bpf_struct(cls_node, module)
             structs_sym_tab[cls_node.name] = struct_info
     return structs_sym_tab
+
+
+def is_bpf_struct(cls_node):
+    return any(
+        isinstance(decorator, ast.Name) and decorator.id == "struct"
+        for decorator in cls_node.decorator_list
+    )
 
 
 def process_bpf_struct(cls_node, module):
@@ -80,3 +83,32 @@ def process_bpf_struct(cls_node, module):
         "field_types": field_types,
     }
     print(f"Created struct {cls_node.name} with fields {field_names}")
+
+
+def parse_struct_fields(cls_node):
+    """ Parse fields of a struct class node """
+    field_names = []
+    field_types = []
+
+    for item in cls_node.body:
+        if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+            field_names.append(item.target.id)
+            field_types.append(get_type_from_ann(item.annotation))
+        else:
+            logger.error(f"Unsupported struct field: {ast.dump(item)}")
+            raise TypeError(f"Unsupported field in {ast.dump(cls_node)}")
+    return field_names, field_types
+
+
+def get_type_from_ann(annotation):
+    """ Convert an AST annotation node to an LLVM IR type for struct fields"""
+    if isinstance(annotation, ast.Call) and \
+       isinstance(annotation.func, ast.Name):
+        if annotation.func.id == "str":
+            # Assumes constant integer argument
+            length = annotation.args[0].value
+            return ir.ArrayType(ir.IntType(8), length)
+    elif isinstance(annotation, ast.Name):
+        return ctypes_to_ir(annotation.id)
+
+    raise TypeError(f"Unsupported annotation type: {ast.dump(annotation)}")
