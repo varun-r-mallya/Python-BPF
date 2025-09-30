@@ -1,5 +1,5 @@
 from pythonbpf import bpf, map, section, bpfglobal, compile
-from pythonbpf.helpers import ktime
+from pythonbpf.helper.helpers import ktime
 from pythonbpf.maps import HashMap
 
 from ctypes import c_void_p, c_int64, c_uint64
@@ -9,6 +9,7 @@ from ctypes import c_void_p, c_int64, c_uint64
 # 2. Run the program: python examples/sys_sync.py
 # 3. Run the program with sudo: sudo tools/check.sh run examples/sys_sync.o
 # 4. Start a Python repl and `import os` and then keep entering `os.sync()` to see reponses.
+
 
 @bpf
 @map

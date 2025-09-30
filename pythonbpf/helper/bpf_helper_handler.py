@@ -1,6 +1,6 @@
 import ast
 from llvmlite import ir
-from .expr_pass import eval_expr
+from pythonbpf.expr_pass import eval_expr
 from enum import Enum
 
 

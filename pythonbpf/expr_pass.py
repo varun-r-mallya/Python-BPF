@@ -23,7 +23,7 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
             return None
     elif isinstance(expr, ast.Call):
         # delayed import to avoid circular dependency
-        from .bpf_helper_handler import helper_func_list, handle_helper_call
+        from .helper.bpf_helper_handler import helper_func_list, handle_helper_call
 
         if isinstance(expr.func, ast.Name):
             # check deref
