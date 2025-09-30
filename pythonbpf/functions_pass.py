@@ -189,7 +189,7 @@ def handle_assign(
                 map_name = rval.func.value.func.id
                 method_name = rval.func.attr
                 if map_name in map_sym_tab:
-                    map_ptr = map_sym_tab[map_name]
+                    # map_ptr = map_sym_tab[map_name]
                     if method_name in helper_func_list:
                         val = handle_helper_call(
                             rval,
@@ -289,7 +289,7 @@ def handle_if(
 ):
     """Handle if statements in the function body."""
     print("Handling if statement")
-    start = builder.block.parent
+    # start = builder.block.parent
     then_block = func.append_basic_block(name="if.then")
     merge_block = func.append_basic_block(name="if.end")
     if stmt.orelse:
