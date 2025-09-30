@@ -3,6 +3,7 @@ from llvmlite import ir
 from pythonbpf.type_deducer import ctypes_to_ir
 from pythonbpf import dwarf_constants as dc
 from enum import Enum
+from .maps_utils import MapProcessorRegistry
 
 map_sym_tab = {}
 
@@ -183,6 +184,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     return global_var_expr
 
 
+@MapProcessorRegistry.register("HashMap")
 def process_hash_map(map_name, rval, module):
     print(f"Creating HashMap map: {map_name}")
     map_params = {"type": BPFMapType.HASH}
@@ -211,6 +213,7 @@ def process_hash_map(map_name, rval, module):
     return create_bpf_map(module, map_name, map_params)
 
 
+@MapProcessorRegistry.register("PerfEventArray")
 def process_perf_event_map(map_name, rval, module):
     print(f"Creating PerfEventArray map: {map_name}")
     map_params = {"type": BPFMapType.PERF_EVENT_ARRAY}
@@ -235,10 +238,6 @@ def process_bpf_map(func_node, module):
     map_name = func_node.name
     print(f"Processing BPF map: {map_name}")
 
-    BPF_MAP_TYPES = {"HashMap": process_hash_map,            # BPF_MAP_TYPE_HASH
-                     "PerfEventArray": process_perf_event_map,   # BPF_MAP_TYPE_PERF_EVENT_ARRAY
-                     }
-
     # For now, assume single return statement
     return_stmt = None
     for stmt in func_node.body:
@@ -252,8 +251,8 @@ def process_bpf_map(func_node, module):
 
     # Handle only HashMap maps
     if isinstance(rval, ast.Call) and isinstance(rval.func, ast.Name):
-        if rval.func.id in BPF_MAP_TYPES:
-            handler = BPF_MAP_TYPES[rval.func.id]
+        handler = MapProcessorRegistry.get(rval.func.id)
+        if handler:
             handler(map_name, rval, module)
         else:
             print(f"Unknown map type {rval.func.id}, defaulting to HashMap")
