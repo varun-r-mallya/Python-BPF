@@ -108,7 +108,7 @@ def compile_to_ir(filename: str, output: str):
     return output
 
 
-def compile():
+def compile() -> bool:
     # Look one level up the stack to the caller of this function
     caller_frame = inspect.stack()[1]
     caller_file = Path(caller_frame.filename).resolve()
@@ -116,14 +116,16 @@ def compile():
     ll_file = Path("/tmp") / caller_file.with_suffix(".ll").name
     o_file = caller_file.with_suffix(".o")
 
-    compile_to_ir(str(caller_file), str(ll_file))
+    success = True
+    success = compile_to_ir(str(caller_file), str(ll_file)) and success
 
-    subprocess.run([
+    success = subprocess.run([
         "llc", "-march=bpf", "-filetype=obj", "-O2",
         str(ll_file), "-o", str(o_file)
-    ], check=True)
+    ], check=True) and success
 
-    print(f"Object written to {o_file}, {ll_file} can be removed")
+    print(f"Object written to {o_file}")
+    return success
 
 
 def BPF() -> BpfProgram:
