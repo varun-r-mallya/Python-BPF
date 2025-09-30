@@ -2,7 +2,7 @@ import ast
 from llvmlite import ir
 from enum import Enum
 from .maps_utils import MapProcessorRegistry
-from ..debuginfo import dwarf_constants as dc
+from ..debuginfo import dwarf_constants as dc, DebugInfoGenerator
 import logging
 
 logger = logging.getLogger(__name__)
