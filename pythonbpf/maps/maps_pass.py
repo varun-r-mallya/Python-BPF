@@ -1,7 +1,7 @@
 import ast
 from llvmlite import ir
-from .type_deducer import ctypes_to_ir
-from . import dwarf_constants as dc
+from pythonbpf.type_deducer import ctypes_to_ir
+from pythonbpf import dwarf_constants as dc
 from enum import Enum
 
 map_sym_tab = {}
@@ -26,12 +26,6 @@ def is_map(func_node):
 class BPFMapType(Enum):
     HASH = 1
     PERF_EVENT_ARRAY = 4
-
-
-BPF_MAP_MAPPINGS = {
-    "HASH": 1,                # BPF_MAP_TYPE_HASH
-    "PERF_EVENT_ARRAY": 4,    # BPF_MAP_TYPE_PERF_EVENT_ARRAY
-}
 
 
 def create_bpf_map(module, map_name, map_params):
@@ -191,7 +185,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
 def process_hash_map(map_name, rval, module):
     print(f"Creating HashMap map: {map_name}")
-    map_params: = {"type": BPFMapType.HASH}
+    map_params = {"type": BPFMapType.HASH}
 
     # Assuming order: key_type, value_type, max_entries
     if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):

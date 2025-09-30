@@ -1,6 +1,6 @@
 from pythonbpf import bpf, map, section, bpfglobal, compile
 from pythonbpf.helpers import ktime, deref
-from pythonbpf.maps import HashMap
+from pythonbpf.maps.maps import HashMap
 
 from ctypes import c_void_p, c_int64, c_int32, c_uint64
 
