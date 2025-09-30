@@ -10,7 +10,6 @@ from ctypes import c_void_p, c_int64, c_int32, c_uint64
 def last() -> HashMap:
     return HashMap(key=c_uint64, value=c_uint64, max_entries=3)
 
-
 @bpf
 @section("blk_start_request")
 def trace_start(ctx: c_void_p) -> c_int32:
