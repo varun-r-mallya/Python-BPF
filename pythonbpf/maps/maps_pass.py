@@ -203,8 +203,8 @@ def process_hash_map(map_name, rval, module):
             map_params["key"] = keyword.value.id
         elif keyword.arg == "value" and isinstance(keyword.value, ast.Name):
             map_params["value"] = keyword.value.id
-        elif keyword.arg == "max_entries" and \
-                isinstance(keyword.value, ast.Constant):
+        elif (keyword.arg == "max_entries" and
+              isinstance(keyword.value, ast.Constant)):
             const_val = keyword.value.value
             if isinstance(const_val, (int, str)):
                 map_params["max_entries"] = const_val
@@ -227,8 +227,8 @@ def process_perf_event_map(map_name, rval, module):
     for keyword in rval.keywords:
         if keyword.arg == "key_size" and isinstance(keyword.value, ast.Name):
             map_params["key_size"] = keyword.value.id
-        elif keyword.arg == "value_size" and \
-                isinstance(keyword.value, ast.Name):
+        elif (keyword.arg == "value_size" and
+              isinstance(keyword.value, ast.Name)):
             map_params["value_size"] = keyword.value.id
 
     logger.info(f"Map parameters: {map_params}")
