@@ -219,6 +219,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
 
             builder.call(fn_ptr, [fmt_ptr, ir.Constant(
                 ir.IntType(32), len(fmt_str))], tail=True)
+    return None
 
 
 def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
@@ -496,3 +497,4 @@ def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_
         else:
             raise NotImplementedError(
                 "Attribute not supported for map method calls.")
+    return None

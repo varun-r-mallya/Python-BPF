@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # and then plots the distribution as a histogram using matplotlib.
 # It provides a quick view of process creation activity over 10 seconds.
 # Everything is done with Python only code and with the new pylibbpf library.
-# Run `sudo /path/to/python/binary/ pybpf4.py`
+# Run `sudo /path/to/python/binary/ clone_plot.py`
 
 @bpf
 @map
