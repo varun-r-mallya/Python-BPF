@@ -3,7 +3,7 @@ from llvmlite import ir
 from .license_pass import license_processing
 from .functions_pass import func_proc
 from pythonbpf.maps import maps_proc
-from .structs.structs_pass import structs_proc
+from .structs import structs_proc
 from .globals_pass import globals_processing
 from .debuginfo import DW_LANG_C11, DwarfBehaviorEnum
 import os
