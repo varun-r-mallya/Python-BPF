@@ -2,7 +2,16 @@ import ast
 from llvmlite import ir
 
 
-def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_sym_tab=None, local_var_metadata=None):
+def eval_expr(
+    func,
+    module,
+    builder,
+    expr,
+    local_sym_tab,
+    map_sym_tab,
+    structs_sym_tab=None,
+    local_var_metadata=None,
+):
     print(f"Evaluating expression: {ast.dump(expr)}")
     print(local_var_metadata)
     if isinstance(expr, ast.Name):
@@ -33,7 +42,11 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
                     print("deref takes exactly one argument")
                     return None
                 arg = expr.args[0]
-                if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Name) and arg.func.id == "deref":
+                if (
+                    isinstance(arg, ast.Call)
+                    and isinstance(arg.func, ast.Name)
+                    and arg.func.id == "deref"
+                ):
                     print("Multiple deref not supported")
                     return None
                 if isinstance(arg, ast.Name):
@@ -52,29 +65,54 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
             # check for helpers
             if expr.func.id in helper_func_list:
                 return handle_helper_call(
-                    expr, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
+                    expr,
+                    module,
+                    builder,
+                    func,
+                    local_sym_tab,
+                    map_sym_tab,
+                    structs_sym_tab,
+                    local_var_metadata,
+                )
         elif isinstance(expr.func, ast.Attribute):
             print(f"Handling method call: {ast.dump(expr.func)}")
-            if isinstance(expr.func.value, ast.Call) and isinstance(expr.func.value.func, ast.Name):
+            if isinstance(expr.func.value, ast.Call) and isinstance(
+                expr.func.value.func, ast.Name
+            ):
                 method_name = expr.func.attr
                 if method_name in helper_func_list:
                     return handle_helper_call(
-                        expr, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
+                        expr,
+                        module,
+                        builder,
+                        func,
+                        local_sym_tab,
+                        map_sym_tab,
+                        structs_sym_tab,
+                        local_var_metadata,
+                    )
             elif isinstance(expr.func.value, ast.Name):
                 obj_name = expr.func.value.id
                 method_name = expr.func.attr
                 if obj_name in map_sym_tab:
                     if method_name in helper_func_list:
                         return handle_helper_call(
-                            expr, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
+                            expr,
+                            module,
+                            builder,
+                            func,
+                            local_sym_tab,
+                            map_sym_tab,
+                            structs_sym_tab,
+                            local_var_metadata,
+                        )
     elif isinstance(expr, ast.Attribute):
         if isinstance(expr.value, ast.Name):
             var_name = expr.value.id
             attr_name = expr.attr
             if var_name in local_sym_tab:
                 var_ptr, var_type = local_sym_tab[var_name]
-                print(f"Loading attribute "
-                      f"{attr_name} from variable {var_name}")
+                print(f"Loading attribute " f"{attr_name} from variable {var_name}")
                 print(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
                 print(local_var_metadata)
                 if local_var_metadata and var_name in local_var_metadata:
@@ -88,13 +126,30 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
     return None
 
 
-def handle_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata):
+def handle_expr(
+    func,
+    module,
+    builder,
+    expr,
+    local_sym_tab,
+    map_sym_tab,
+    structs_sym_tab,
+    local_var_metadata,
+):
     """Handle expression statements in the function body."""
     print(f"Handling expression: {ast.dump(expr)}")
     print(local_var_metadata)
     call = expr.value
     if isinstance(call, ast.Call):
-        eval_expr(func, module, builder, call, local_sym_tab,
-                  map_sym_tab, structs_sym_tab, local_var_metadata)
+        eval_expr(
+            func,
+            module,
+            builder,
+            call,
+            local_sym_tab,
+            map_sym_tab,
+            structs_sym_tab,
+            local_var_metadata,
+        )
     else:
         print("Unsupported expression type")

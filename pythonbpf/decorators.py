@@ -26,7 +26,9 @@ def section(name: str):
     def wrapper(fn):
         fn._section = name
         return fn
+
     return wrapper
+
 
 # from types import SimpleNamespace
 

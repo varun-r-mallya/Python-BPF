@@ -4,6 +4,7 @@ from pythonbpf.maps import HashMap
 
 from ctypes import c_void_p, c_int64
 
+
 @bpf
 @map
 def count() -> HashMap:
@@ -22,9 +23,11 @@ def hello_world(ctx: c_void_p) -> c_int64:
 
     return XDP_PASS
 
+
 @bpf
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
+
 
 compile()

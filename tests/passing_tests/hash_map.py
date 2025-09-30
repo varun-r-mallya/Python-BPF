@@ -10,15 +10,18 @@ from ctypes import c_int32, c_uint64, c_void_p
 def mymap() -> HashMap:
     return HashMap(key=c_int32, value=c_uint64, max_entries=16)
 
+
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")
 def testing(ctx: c_void_p) -> c_int32:
     return c_int32(0)
 
+
 @bpf
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
+
 
 # Load program (no sections -> nothing attached, just map exists)
 b = BPF()

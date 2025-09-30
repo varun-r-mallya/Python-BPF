@@ -3,7 +3,16 @@ from llvmlite import ir
 from .expr_pass import eval_expr
 
 
-def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_ktime_get_ns_emitter(
+    call,
+    map_ptr,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
     """
     Emit LLVM IR for bpf_ktime_get_ns helper function call.
     """
@@ -16,13 +25,23 @@ def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab
     return result, ir.IntType(64)
 
 
-def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_map_lookup_elem_emitter(
+    call,
+    map_ptr,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
     """
     Emit LLVM IR for bpf_map_lookup_elem helper function call.
     """
     if call.args and len(call.args) != 1:
-        raise ValueError("Map lookup expects exactly one argument, got "
-                         f"{len(call.args)}")
+        raise ValueError(
+            "Map lookup expects exactly one argument, got " f"{len(call.args)}"
+        )
     key_arg = call.args[0]
     if isinstance(key_arg, ast.Name):
         key_name = key_arg.id
@@ -30,7 +49,8 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
             key_ptr = local_sym_tab[key_name][0]
         else:
             raise ValueError(
-                f"Key variable {key_name} not found in local symbol table.")
+                f"Key variable {key_name} not found in local symbol table."
+            )
     elif isinstance(key_arg, ast.Constant) and isinstance(key_arg.value, int):
         # handle constant integer keys
         key_val = key_arg.value
@@ -40,7 +60,8 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
         builder.store(ir.Constant(key_type, key_val), key_ptr)
     else:
         raise NotImplementedError(
-            "Only simple variable names are supported as keys in map lookup.")
+            "Only simple variable names are supported as keys in map lookup."
+        )
 
     if key_ptr is None:
         raise ValueError("Key pointer is None.")
@@ -50,7 +71,7 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     fn_type = ir.FunctionType(
         ir.PointerType(),  # Return type: void*
         [ir.PointerType(), ir.PointerType()],  # Args: (void*, void*)
-        var_arg=False
+        var_arg=False,
     )
     fn_ptr_type = ir.PointerType(fn_type)
 
@@ -63,7 +84,16 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     return result, ir.PointerType()
 
 
-def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_printk_emitter(
+    call,
+    map_ptr,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
     if not hasattr(func, "_fmt_counter"):
         func._fmt_counter = 0
 
@@ -84,7 +114,8 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                     exprs.append(ir.Constant(ir.IntType(64), value.value))
                 else:
                     raise NotImplementedError(
-                        "Only string and integer constants are supported in f-string.")
+                        "Only string and integer constants are supported in f-string."
+                    )
             elif isinstance(value, ast.FormattedValue):
                 print("Formatted value:", ast.dump(value))
                 # TODO: Dirty handling here, only checks for int or str
@@ -100,13 +131,19 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                             exprs.append(value.value)
                         else:
                             raise NotImplementedError(
-                                "Only integer and pointer types are supported in formatted values.")
+                                "Only integer and pointer types are supported in formatted values."
+                            )
                     else:
                         raise ValueError(
-                            f"Variable {value.value.id} not found in local symbol table.")
+                            f"Variable {value.value.id} not found in local symbol table."
+                        )
                 elif isinstance(value.value, ast.Attribute):
                     # object field access from struct
-                    if isinstance(value.value.value, ast.Name) and local_sym_tab and value.value.value.id in local_sym_tab:
+                    if (
+                        isinstance(value.value.value, ast.Name)
+                        and local_sym_tab
+                        and value.value.value.id in local_sym_tab
+                    ):
                         var_name = value.value.value.id
                         field_name = value.value.attr
                         if local_var_metadata and var_name in local_var_metadata:
@@ -114,8 +151,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                             if var_type in struct_sym_tab:
                                 struct_info = struct_sym_tab[var_type]
                                 if field_name in struct_info.fields:
-                                    field_type = struct_info.field_type(
-                                        field_name)
+                                    field_type = struct_info.field_type(field_name)
                                     if isinstance(field_type, ir.IntType):
                                         fmt_parts.append("%lld")
                                         exprs.append(value.value)
@@ -124,39 +160,44 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                                         exprs.append(value.value)
                                     else:
                                         raise NotImplementedError(
-                                            "Only integer and pointer types are supported in formatted values.")
+                                            "Only integer and pointer types are supported in formatted values."
+                                        )
                                 else:
                                     raise ValueError(
-                                        f"Field {field_name} not found in struct {var_type}.")
+                                        f"Field {field_name} not found in struct {var_type}."
+                                    )
                             else:
                                 raise ValueError(
-                                    f"Struct type {var_type} for variable {var_name} not found in struct symbol table.")
+                                    f"Struct type {var_type} for variable {var_name} not found in struct symbol table."
+                                )
                         else:
                             raise ValueError(
-                                f"Metadata for variable {var_name} not found in local variable metadata.")
+                                f"Metadata for variable {var_name} not found in local variable metadata."
+                            )
                     else:
                         raise ValueError(
-                            f"Variable {value.value.value.id} not found in local symbol table.")
+                            f"Variable {value.value.value.id} not found in local symbol table."
+                        )
                 else:
                     raise NotImplementedError(
-                        "Only simple variable names are supported in formatted values.")
+                        "Only simple variable names are supported in formatted values."
+                    )
             else:
-                raise NotImplementedError(
-                    "Unsupported value type in f-string.")
+                raise NotImplementedError("Unsupported value type in f-string.")
 
         fmt_str = "".join(fmt_parts) + "\n" + "\0"
         fmt_name = f"{func.name}____fmt{func._fmt_counter}"
         func._fmt_counter += 1
 
         fmt_gvar = ir.GlobalVariable(
-            module, ir.ArrayType(ir.IntType(8), len(fmt_str)), name=fmt_name)
+            module, ir.ArrayType(ir.IntType(8), len(fmt_str)), name=fmt_name
+        )
         fmt_gvar.global_constant = True
-        fmt_gvar.initializer = ir.Constant(                 # type: ignore
-            ir.ArrayType(ir.IntType(8), len(fmt_str)),
-            bytearray(fmt_str.encode("utf8"))
+        fmt_gvar.initializer = ir.Constant(  # type: ignore
+            ir.ArrayType(ir.IntType(8), len(fmt_str)), bytearray(fmt_str.encode("utf8"))
         )
         fmt_gvar.linkage = "internal"
-        fmt_gvar.align = 1              # type: ignore
+        fmt_gvar.align = 1  # type: ignore
 
         fmt_ptr = builder.bitcast(fmt_gvar, ir.PointerType())
 
@@ -165,12 +206,21 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
         # Only 3 args supported in bpf_printk
         if len(exprs) > 3:
             print(
-                "Warning: bpf_printk supports up to 3 arguments, extra arguments will be ignored.")
+                "Warning: bpf_printk supports up to 3 arguments, extra arguments will be ignored."
+            )
 
         for expr in exprs[:3]:
             print(f"{ast.dump(expr)}")
-            val, _ = eval_expr(func, module, builder,
-                               expr, local_sym_tab, None, struct_sym_tab, local_var_metadata)
+            val, _ = eval_expr(
+                func,
+                module,
+                builder,
+                expr,
+                local_sym_tab,
+                None,
+                struct_sym_tab,
+                local_var_metadata,
+            )
             if val:
                 if isinstance(val.type, ir.PointerType):
                     val = builder.ptrtoint(val, ir.IntType(64))
@@ -179,15 +229,18 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                         val = builder.sext(val, ir.IntType(64))
                 else:
                     print(
-                        "Warning: Only integer and pointer types are supported in bpf_printk arguments. Others will be converted to 0.")
+                        "Warning: Only integer and pointer types are supported in bpf_printk arguments. Others will be converted to 0."
+                    )
                     val = ir.Constant(ir.IntType(64), 0)
                 args.append(val)
             else:
                 print(
-                    "Warning: Failed to evaluate expression for bpf_printk argument. It will be converted to 0.")
+                    "Warning: Failed to evaluate expression for bpf_printk argument. It will be converted to 0."
+                )
                 args.append(ir.Constant(ir.IntType(64), 0))
-        fn_type = ir.FunctionType(ir.IntType(
-            64), [ir.PointerType(), ir.IntType(32)], var_arg=True)
+        fn_type = ir.FunctionType(
+            ir.IntType(64), [ir.PointerType(), ir.IntType(32)], var_arg=True
+        )
         fn_ptr_type = ir.PointerType(fn_type)
         fn_addr = ir.Constant(ir.IntType(64), 6)
         fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
@@ -200,36 +253,50 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
             func._fmt_counter += 1
 
             fmt_gvar = ir.GlobalVariable(
-                module, ir.ArrayType(ir.IntType(8), len(fmt_str)), name=fmt_name)
+                module, ir.ArrayType(ir.IntType(8), len(fmt_str)), name=fmt_name
+            )
             fmt_gvar.global_constant = True
-            fmt_gvar.initializer = ir.Constant(     # type: ignore
+            fmt_gvar.initializer = ir.Constant(  # type: ignore
                 ir.ArrayType(ir.IntType(8), len(fmt_str)),
-                bytearray(fmt_str.encode("utf8"))
+                bytearray(fmt_str.encode("utf8")),
             )
             fmt_gvar.linkage = "internal"
-            fmt_gvar.align = 1      # type: ignore
+            fmt_gvar.align = 1  # type: ignore
 
             fmt_ptr = builder.bitcast(fmt_gvar, ir.PointerType())
 
-            fn_type = ir.FunctionType(ir.IntType(
-                64), [ir.PointerType(), ir.IntType(32)], var_arg=True)
+            fn_type = ir.FunctionType(
+                ir.IntType(64), [ir.PointerType(), ir.IntType(32)], var_arg=True
+            )
             fn_ptr_type = ir.PointerType(fn_type)
             fn_addr = ir.Constant(ir.IntType(64), 6)
             fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
 
-            builder.call(fn_ptr, [fmt_ptr, ir.Constant(
-                ir.IntType(32), len(fmt_str))], tail=True)
+            builder.call(
+                fn_ptr, [fmt_ptr, ir.Constant(ir.IntType(32), len(fmt_str))], tail=True
+            )
     return None
 
 
-def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_map_update_elem_emitter(
+    call,
+    map_ptr,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
     """
     Emit LLVM IR for bpf_map_update_elem helper function call.
     Expected call signature: map.update(key, value, flags=0)
     """
     if not call.args or len(call.args) < 2 or len(call.args) > 3:
-        raise ValueError("Map update expects 2 or 3 arguments (key, value, flags), got "
-                         f"{len(call.args)}")
+        raise ValueError(
+            "Map update expects 2 or 3 arguments (key, value, flags), got "
+            f"{len(call.args)}"
+        )
 
     key_arg = call.args[0]
     value_arg = call.args[1]
@@ -242,7 +309,8 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
             key_ptr = local_sym_tab[key_name][0]
         else:
             raise ValueError(
-                f"Key variable {key_name} not found in local symbol table.")
+                f"Key variable {key_name} not found in local symbol table."
+            )
     elif isinstance(key_arg, ast.Constant) and isinstance(key_arg.value, int):
         # Handle constant integer keys
         key_val = key_arg.value
@@ -252,7 +320,8 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
         builder.store(ir.Constant(key_type, key_val), key_ptr)
     else:
         raise NotImplementedError(
-            "Only simple variable names and integer constants are supported as keys in map update.")
+            "Only simple variable names and integer constants are supported as keys in map update."
+        )
 
     # Handle value
     if isinstance(value_arg, ast.Name):
@@ -261,7 +330,8 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
             value_ptr = local_sym_tab[value_name][0]
         else:
             raise ValueError(
-                f"Value variable {value_name} not found in local symbol table.")
+                f"Value variable {value_name} not found in local symbol table."
+            )
     elif isinstance(value_arg, ast.Constant) and isinstance(value_arg.value, int):
         # Handle constant integers
         value_val = value_arg.value
@@ -271,7 +341,8 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
         builder.store(ir.Constant(value_type, value_val), value_ptr)
     else:
         raise NotImplementedError(
-            "Only simple variable names and integer constants are supported as values in map update.")
+            "Only simple variable names and integer constants are supported as values in map update."
+        )
 
     # Handle flags argument (defaults to 0)
     if flags_arg is not None:
@@ -285,10 +356,12 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
                 flags_val = builder.load(flags_ptr)
             else:
                 raise ValueError(
-                    f"Flags variable {flags_name} not found in local symbol table.")
+                    f"Flags variable {flags_name} not found in local symbol table."
+                )
         else:
             raise NotImplementedError(
-                "Only integer constants and simple variable names are supported as flags in map update.")
+                "Only integer constants and simple variable names are supported as flags in map update."
+            )
     else:
         flags_val = 0
 
@@ -299,7 +372,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     fn_type = ir.FunctionType(
         ir.IntType(64),
         [ir.PointerType(), ir.PointerType(), ir.PointerType(), ir.IntType(64)],
-        var_arg=False
+        var_arg=False,
     )
     fn_ptr_type = ir.PointerType(fn_type)
 
@@ -313,20 +386,31 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
         flags_const = flags_val
 
     result = builder.call(
-        fn_ptr, [map_void_ptr, key_ptr, value_ptr, flags_const], tail=False)
+        fn_ptr, [map_void_ptr, key_ptr, value_ptr, flags_const], tail=False
+    )
 
     return result, None
 
 
-def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_map_delete_elem_emitter(
+    call,
+    map_ptr,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
     """
     Emit LLVM IR for bpf_map_delete_elem helper function call.
     Expected call signature: map.delete(key)
     """
     # Check for correct number of arguments
     if not call.args or len(call.args) != 1:
-        raise ValueError("Map delete expects exactly 1 argument (key), got "
-                         f"{len(call.args)}")
+        raise ValueError(
+            "Map delete expects exactly 1 argument (key), got " f"{len(call.args)}"
+        )
 
     key_arg = call.args[0]
 
@@ -337,7 +421,8 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
             key_ptr = local_sym_tab[key_name][0]
         else:
             raise ValueError(
-                f"Key variable {key_name} not found in local symbol table.")
+                f"Key variable {key_name} not found in local symbol table."
+            )
     elif isinstance(key_arg, ast.Constant) and isinstance(key_arg.value, int):
         # Handle constant integer keys
         key_val = key_arg.value
@@ -347,7 +432,8 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
         builder.store(ir.Constant(key_type, key_val), key_ptr)
     else:
         raise NotImplementedError(
-            "Only simple variable names and integer constants are supported as keys in map delete.")
+            "Only simple variable names and integer constants are supported as keys in map delete."
+        )
 
     if key_ptr is None:
         raise ValueError("Key pointer is None.")
@@ -359,7 +445,7 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     fn_type = ir.FunctionType(
         ir.IntType(64),  # Return type: int64 (status code)
         [ir.PointerType(), ir.PointerType()],  # Args: (void*, void*)
-        var_arg=False
+        var_arg=False,
     )
     fn_ptr_type = ir.PointerType(fn_type)
 
@@ -373,7 +459,16 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     return result, None
 
 
-def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_get_current_pid_tgid_emitter(
+    call,
+    map_ptr,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
     """
     Emit LLVM IR for bpf_get_current_pid_tgid helper function call.
     """
@@ -390,10 +485,21 @@ def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local
     return pid, ir.IntType(64)
 
 
-def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_perf_event_output_handler(
+    call,
+    map_ptr,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
     if len(call.args) != 1:
-        raise ValueError("Perf event output expects exactly one argument (data), got "
-                         f"{len(call.args)}")
+        raise ValueError(
+            "Perf event output expects exactly one argument (data), got "
+            f"{len(call.args)}"
+        )
     data_arg = call.args[0]
     ctx_ptr = func.args[0]  # First argument to the function is ctx
 
@@ -403,7 +509,8 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
             data_ptr = local_sym_tab[data_name][0]
         else:
             raise ValueError(
-                f"Data variable {data_name} not found in local symbol table.")
+                f"Data variable {data_name} not found in local symbol table."
+            )
         # Check is data_name is a struct
         if local_var_metadata and data_name in local_var_metadata:
             data_type = local_var_metadata[data_name]
@@ -412,10 +519,12 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
                 size_val = ir.Constant(ir.IntType(64), struct_info.size)
             else:
                 raise ValueError(
-                    f"Struct type {data_type} for variable {data_name} not found in struct symbol table.")
+                    f"Struct type {data_type} for variable {data_name} not found in struct symbol table."
+                )
         else:
             raise ValueError(
-                f"Metadata for variable {data_name} not found in local variable metadata.")
+                f"Metadata for variable {data_name} not found in local variable metadata."
+            )
 
         # BPF_F_CURRENT_CPU is -1 in 32 bit
         flags_val = ir.Constant(ir.IntType(64), 0xFFFFFFFF)
@@ -424,9 +533,14 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
         data_void_ptr = builder.bitcast(data_ptr, ir.PointerType())
         fn_type = ir.FunctionType(
             ir.IntType(64),
-            [ir.PointerType(ir.IntType(8)), ir.PointerType(), ir.IntType(64),
-             ir.PointerType(), ir.IntType(64)],
-            var_arg=False
+            [
+                ir.PointerType(ir.IntType(8)),
+                ir.PointerType(),
+                ir.IntType(64),
+                ir.PointerType(),
+                ir.IntType(64),
+            ],
+            var_arg=False,
         )
         fn_ptr_type = ir.PointerType(fn_type)
 
@@ -435,11 +549,15 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
         fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
 
         result = builder.call(
-            fn_ptr, [ctx_ptr, map_void_ptr, flags_val, data_void_ptr, size_val], tail=False)
+            fn_ptr,
+            [ctx_ptr, map_void_ptr, flags_val, data_void_ptr, size_val],
+            tail=False,
+        )
         return result, None
     else:
         raise NotImplementedError(
-            "Only simple object names are supported as data in perf event output.")
+            "Only simple object names are supported as data in perf event output."
+        )
 
 
 helper_func_list = {
@@ -453,19 +571,40 @@ helper_func_list = {
 }
 
 
-def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def handle_helper_call(
+    call,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    map_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
     print(local_var_metadata)
     if isinstance(call.func, ast.Name):
         func_name = call.func.id
         if func_name in helper_func_list:
             # it is not a map method call
-            return helper_func_list[func_name](call, None, module, builder, func, local_sym_tab, struct_sym_tab, local_var_metadata)
+            return helper_func_list[func_name](
+                call,
+                None,
+                module,
+                builder,
+                func,
+                local_sym_tab,
+                struct_sym_tab,
+                local_var_metadata,
+            )
         else:
             raise NotImplementedError(
-                f"Function {func_name} is not implemented as a helper function.")
+                f"Function {func_name} is not implemented as a helper function."
+            )
     elif isinstance(call.func, ast.Attribute):
         # likely a map method call
-        if isinstance(call.func.value, ast.Call) and isinstance(call.func.value.func, ast.Name):
+        if isinstance(call.func.value, ast.Call) and isinstance(
+            call.func.value.func, ast.Name
+        ):
             map_name = call.func.value.func.id
             method_name = call.func.attr
             if map_sym_tab and map_name in map_sym_tab:
@@ -473,13 +612,21 @@ def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_
                 if method_name in helper_func_list:
                     print(local_var_metadata)
                     return helper_func_list[method_name](
-                        call, map_ptr, module, builder, func, local_sym_tab, struct_sym_tab, local_var_metadata)
+                        call,
+                        map_ptr,
+                        module,
+                        builder,
+                        func,
+                        local_sym_tab,
+                        struct_sym_tab,
+                        local_var_metadata,
+                    )
                 else:
                     raise NotImplementedError(
-                        f"Map method {method_name} is not implemented as a helper function.")
+                        f"Map method {method_name} is not implemented as a helper function."
+                    )
             else:
-                raise ValueError(
-                    f"Map variable {map_name} not found in symbol tables.")
+                raise ValueError(f"Map variable {map_name} not found in symbol tables.")
         elif isinstance(call.func.value, ast.Name):
             obj_name = call.func.value.id
             method_name = call.func.attr
@@ -487,14 +634,21 @@ def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_
                 map_ptr = map_sym_tab[obj_name]
                 if method_name in helper_func_list:
                     return helper_func_list[method_name](
-                        call, map_ptr, module, builder, func, local_sym_tab, struct_sym_tab, local_var_metadata)
+                        call,
+                        map_ptr,
+                        module,
+                        builder,
+                        func,
+                        local_sym_tab,
+                        struct_sym_tab,
+                        local_var_metadata,
+                    )
                 else:
                     raise NotImplementedError(
-                        f"Map method {method_name} is not implemented as a helper function.")
+                        f"Map method {method_name} is not implemented as a helper function."
+                    )
             else:
-                raise ValueError(
-                    f"Map variable {obj_name} not found in symbol tables.")
+                raise ValueError(f"Map variable {obj_name} not found in symbol tables.")
         else:
-            raise NotImplementedError(
-                "Attribute not supported for map method calls.")
+            raise NotImplementedError("Attribute not supported for map method calls.")
     return None

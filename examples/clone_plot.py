@@ -14,10 +14,12 @@ import matplotlib.pyplot as plt
 # Everything is done with Python only code and with the new pylibbpf library.
 # Run `sudo /path/to/python/binary/ clone_plot.py`
 
+
 @bpf
 @map
 def hist() -> HashMap:
     return HashMap(key=c_int32, value=c_uint64, max_entries=4096)
+
 
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")

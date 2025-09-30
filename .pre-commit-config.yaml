@@ -1,0 +1,60 @@
+# To use:
+#
+#     pre-commit run -a
+#
+# Or:
+#
+#     pre-commit install  # (runs every time you commit in git)
+#
+# To update this file:
+#
+#     pre-commit autoupdate
+#
+# See https://github.com/pre-commit/pre-commit
+
+exclude: 'vmlinux.*\.py$'
+
+ci:
+  autoupdate_commit_msg: "chore: update pre-commit hooks"
+  autofix_commit_msg: "style: pre-commit fixes"
+
+repos:
+# Standard hooks
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+  - id: check-added-large-files
+  - id: check-case-conflict
+  - id: check-merge-conflict
+  - id: check-symlinks
+  - id: check-yaml
+    exclude: ^conda\.recipe/meta\.yaml$
+  - id: debug-statements
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
+  - id: requirements-txt-fixer
+  - id: trailing-whitespace
+
+#- repo: https://github.com/astral-sh/ruff-pre-commit
+#  rev: "v0.4.2"
+#  hooks:
+#    - id: ruff
+#      args: ["--fix", "--show-fixes"]
+#    - id: ruff-format
+#      exclude: ^(docs)
+
+## Checking static types
+#- repo: https://github.com/pre-commit/mirrors-mypy
+#  rev: "v1.10.0"
+#  hooks:
+#    - id: mypy
+#      files: "setup.py"
+#      args: []
+#      additional_dependencies: [types-setuptools]
+
+# Changes tabs to spaces
+- repo: https://github.com/Lucas-C/pre-commit-hooks
+  rev: v1.5.5
+  hooks:
+  - id: remove-tabs
+    exclude: '^(docs)|.*/Makefile$|Makefile$'

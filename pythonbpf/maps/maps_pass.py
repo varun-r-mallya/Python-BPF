@@ -2,14 +2,14 @@ import ast
 from llvmlite import ir
 from enum import Enum
 from .maps_utils import MapProcessorRegistry
-from ..debuginfo import dwarf_constants as dc, DebugInfoGenerator
+from ..debuginfo import DebugInfoGenerator
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 def maps_proc(tree, module, chunks):
-    """ Process all functions decorated with @map to find BPF maps """
+    """Process all functions decorated with @map to find BPF maps"""
     map_sym_tab = {}
     for func_node in chunks:
         if is_map(func_node):
@@ -35,14 +35,14 @@ def create_bpf_map(module, map_name, map_params):
 
     # Create the anonymous struct type for BPF map
     map_struct_type = ir.LiteralStructType(
-        [ir.PointerType() for _ in range(len(map_params))])
+        [ir.PointerType() for _ in range(len(map_params))]
+    )
 
     # Create the global variable
     map_global = ir.GlobalVariable(module, map_struct_type, name=map_name)
-    map_global.linkage = 'dso_local'
+    map_global.linkage = "dso_local"
     map_global.global_constant = False
-    map_global.initializer = ir.Constant(
-        map_struct_type, None)
+    map_global.initializer = ir.Constant(map_struct_type, None)
     map_global.section = ".maps"
     map_global.align = 8
 
@@ -56,11 +56,16 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
     uint_type = generator.get_uint32_type()
     ulong_type = generator.get_uint64_type()
-    array_type = generator.create_array_type(uint_type, map_params.get("type", BPFMapType.HASH).value)
+    array_type = generator.create_array_type(
+        uint_type, map_params.get("type", BPFMapType.HASH).value
+    )
     type_ptr = generator.create_pointer_type(array_type, 64)
-    key_ptr = generator.create_pointer_type(array_type if "key_size" in map_params else ulong_type, 64)
-    value_ptr = generator.create_pointer_type(array_type if "value_size" in map_params else ulong_type, 64)
-
+    key_ptr = generator.create_pointer_type(
+        array_type if "key_size" in map_params else ulong_type, 64
+    )
+    value_ptr = generator.create_pointer_type(
+        array_type if "value_size" in map_params else ulong_type, 64
+    )
 
     elements_arr = []
 
@@ -82,16 +87,24 @@ def create_map_debug_info(module, map_global, map_name, map_params):
         cnt += 1
 
     if "max_entries" in map_params:
-        max_entries_array = generator.create_array_type(uint_type, map_params["max_entries"])
+        max_entries_array = generator.create_array_type(
+            uint_type, map_params["max_entries"]
+        )
         max_entries_ptr = generator.create_pointer_type(max_entries_array, 64)
-        max_entries_member = generator.create_struct_member("max_entries", max_entries_ptr, cnt * 64)
+        max_entries_member = generator.create_struct_member(
+            "max_entries", max_entries_ptr, cnt * 64
+        )
         elements_arr.append(max_entries_member)
 
     # Create the struct type
-    struct_type = generator.create_struct_type(elements_arr, 64 * len(elements_arr), is_distinct=True)
+    struct_type = generator.create_struct_type(
+        elements_arr, 64 * len(elements_arr), is_distinct=True
+    )
 
     # Create global variable debug info
-    global_var = generator.create_global_var_debug_info(map_name, struct_type, is_local=False)
+    global_var = generator.create_global_var_debug_info(
+        map_name, struct_type, is_local=False
+    )
 
     # Attach debug info to the global variable
     map_global.set_metadata("dbg", global_var)
@@ -120,8 +133,7 @@ def process_hash_map(map_name, rval, module):
             map_params["key"] = keyword.value.id
         elif keyword.arg == "value" and isinstance(keyword.value, ast.Name):
             map_params["value"] = keyword.value.id
-        elif (keyword.arg == "max_entries" and
-              isinstance(keyword.value, ast.Constant)):
+        elif keyword.arg == "max_entries" and isinstance(keyword.value, ast.Constant):
             const_val = keyword.value.value
             if isinstance(const_val, (int, str)):
                 map_params["max_entries"] = const_val
@@ -147,8 +159,7 @@ def process_perf_event_map(map_name, rval, module):
     for keyword in rval.keywords:
         if keyword.arg == "key_size" and isinstance(keyword.value, ast.Name):
             map_params["key_size"] = keyword.value.id
-        elif (keyword.arg == "value_size" and
-              isinstance(keyword.value, ast.Name)):
+        elif keyword.arg == "value_size" and isinstance(keyword.value, ast.Name):
             map_params["value_size"] = keyword.value.id
 
     logger.info(f"Map parameters: {map_params}")
@@ -179,8 +190,9 @@ def process_bpf_map(func_node, module):
         if handler:
             return handler(map_name, rval, module)
         else:
-            logger.warning(f"Unknown map type "
-                           f"{rval.func.id}, defaulting to HashMap")
+            logger.warning(
+                f"Unknown map type " f"{rval.func.id}, defaulting to HashMap"
+            )
             return process_hash_map(map_name, rval, module)
     else:
         raise ValueError("Function under @map must return a map")

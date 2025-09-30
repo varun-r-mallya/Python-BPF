@@ -10,6 +10,7 @@ from ctypes import c_void_p, c_int64, c_uint64
 # 3. Run the program with sudo: sudo tools/check.sh run examples/sys_sync.o
 # 4. Start a Python repl and `import os` and then keep entering `os.sync()` to see reponses.
 
+
 @bpf
 @map
 def last() -> HashMap:
@@ -23,9 +24,9 @@ def do_trace(ctx: c_void_p) -> c_int64:
     tsp = last().lookup(key)
     if tsp:
         kt = ktime()
-        delta = (kt - tsp)
+        delta = kt - tsp
         if delta < 1000000000:
-            time_ms = (delta // 1000000)
+            time_ms = delta // 1000000
             print(f"sync called within last second, last {time_ms} ms ago")
         last().delete(key)
     else:

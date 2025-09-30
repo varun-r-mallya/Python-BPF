@@ -11,6 +11,7 @@ from ctypes import c_void_p, c_int64
 # 4. Attach object file to any network device with something like ./check.sh xdp examples/xdp_pass.o tailscale0
 # 5. send traffic through the device and observe effects
 
+
 @bpf
 @map
 def count() -> HashMap:
@@ -33,9 +34,11 @@ def hello_world(ctx: c_void_p) -> c_int64:
 
     return XDP_PASS
 
+
 @bpf
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
+
 
 compile()

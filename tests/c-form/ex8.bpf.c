@@ -3,7 +3,7 @@
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 #include <linux/blkdev.h>
-#define __TARGET_ARCH_aarch64 
+#define __TARGET_ARCH_aarch64
 #define u64 unsigned long long
 
 struct {
@@ -33,11 +33,11 @@ SEC("kprobe/blk_account_io_completion")
 int BPF_KPROBE(trace_completion, struct request *req)
 {
     u64 *tsp, delta;
-    
+
     tsp = bpf_map_lookup_elem(&start, &req);
     if (tsp) {
         delta = bpf_ktime_get_ns() - *tsp;
-        bpf_printk("%d %x %d\n", req->__data_len, 
+        bpf_printk("%d %x %d\n", req->__data_len,
                   req->cmd_flags, delta / 1000);
         bpf_map_delete_elem(&start, &req);
     }
