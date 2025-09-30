@@ -16,7 +16,9 @@ class BPFHelperID(Enum):
 
 
 @HelperHandlerRegistry.register("ktime")
-def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func,
+                             local_sym_tab=None, struct_sym_tab=None,
+                             local_var_metadata=None):
     """
     Emit LLVM IR for bpf_ktime_get_ns helper function call.
     """
@@ -30,7 +32,9 @@ def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab
 
 
 @HelperHandlerRegistry.register("lookup")
-def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func,
+                                local_sym_tab=None, struct_sym_tab=None,
+                                local_var_metadata=None):
     """
     Emit LLVM IR for bpf_map_lookup_elem helper function call.
     """
@@ -79,7 +83,9 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
 
 
 @HelperHandlerRegistry.register("print")
-def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_printk_emitter(call, map_ptr, module, builder, func,
+                       local_sym_tab=None, struct_sym_tab=None,
+                       local_var_metadata=None):
     if not hasattr(func, "_fmt_counter"):
         func._fmt_counter = 0
 
@@ -122,7 +128,9 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
                             f"Variable {value.value.id} not found in local symbol table.")
                 elif isinstance(value.value, ast.Attribute):
                     # object field access from struct
-                    if isinstance(value.value.value, ast.Name) and local_sym_tab and value.value.value.id in local_sym_tab:
+                    if (isinstance(value.value.value, ast.Name) and
+                        local_sym_tab and
+                            value.value.value.id in local_sym_tab):
                         var_name = value.value.value.id
                         field_name = value.value.attr
                         if local_var_metadata and var_name in local_var_metadata:
@@ -239,12 +247,16 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
 
 
 @HelperHandlerRegistry.register("update")
-def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func,
+                                local_sym_tab=None, struct_sym_tab=None,
+                                local_var_metadata=None):
     """
     Emit LLVM IR for bpf_map_update_elem helper function call.
     Expected call signature: map.update(key, value, flags=0)
     """
-    if not call.args or len(call.args) < 2 or len(call.args) > 3:
+    if (not call.args or
+        len(call.args) < 2 or
+            len(call.args) > 3):
         raise ValueError("Map update expects 2 or 3 arguments (key, value, flags), got "
                          f"{len(call.args)}")
 
@@ -337,7 +349,9 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
 
 
 @HelperHandlerRegistry.register("delete")
-def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func,
+                                local_sym_tab=None, struct_sym_tab=None,
+                                local_var_metadata=None):
     """
     Emit LLVM IR for bpf_map_delete_elem helper function call.
     Expected call signature: map.delete(key)
@@ -394,7 +408,9 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
 
 
 @HelperHandlerRegistry.register("pid")
-def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func,
+                                     local_sym_tab=None, struct_sym_tab=None,
+                                     local_var_metadata=None):
     """
     Emit LLVM IR for bpf_get_current_pid_tgid helper function call.
     """
@@ -412,7 +428,9 @@ def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local
     return pid, ir.IntType(64)
 
 
-def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def bpf_perf_event_output_handler(call, map_ptr, module, builder, func,
+                                  local_sym_tab=None, struct_sym_tab=None,
+                                  local_var_metadata=None):
     if len(call.args) != 1:
         raise ValueError("Perf event output expects exactly one argument (data), got "
                          f"{len(call.args)}")
@@ -465,7 +483,9 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
             "Only simple object names are supported as data in perf event output.")
 
 
-def handle_helper_call(call, module, builder, func, local_sym_tab=None, map_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
+def handle_helper_call(call, module, builder, func,
+                       local_sym_tab=None, map_sym_tab=None,
+                       struct_sym_tab=None, local_var_metadata=None):
     print(local_var_metadata)
     if isinstance(call.func, ast.Name):
         func_name = call.func.id
