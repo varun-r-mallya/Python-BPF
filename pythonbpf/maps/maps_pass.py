@@ -1,8 +1,8 @@
 import ast
 from llvmlite import ir
-from pythonbpf import dwarf_constants as dc
 from enum import Enum
 from .maps_utils import MapProcessorRegistry
+from ..debuginfo import dwarf_constants as dc
 import logging
 
 logger = logging.getLogger(__name__)

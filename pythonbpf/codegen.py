@@ -5,6 +5,7 @@ from .functions_pass import func_proc
 from pythonbpf.maps import maps_proc
 from .structs.structs_pass import structs_proc
 from .globals_pass import globals_processing
+from .debuginfo import DW_LANG_C11, DwarfBehaviorEnum
 import os
 import subprocess
 import inspect
@@ -12,6 +13,7 @@ from pathlib import Path
 from pylibbpf import BpfProgram
 import tempfile
 
+VERSION = "v0.1.3"
 
 def find_bpf_chunks(tree):
     """Find all functions decorated with @bpf in the AST."""
@@ -58,7 +60,7 @@ def compile_to_ir(filename: str, output: str):
         module._debug_compile_unit = module.add_debug_info("DICompileUnit", {       # type: ignore
             "language": 29,  # DW_LANG_C11
             "file": module._file_metadata,      # type: ignore
-            "producer": "PythonBPF DSL Compiler",
+            "producer": f"PythonBPF {VERSION}",
             "isOptimized": True,
             "runtimeVersion": 0,
             "emissionKind": 1,
@@ -92,7 +94,7 @@ def compile_to_ir(filename: str, output: str):
     module.add_named_metadata("llvm.module.flags", debug_info_version)
     module.add_named_metadata("llvm.module.flags", dwarf_version)
 
-    module.add_named_metadata("llvm.ident", ["llvmlite PythonBPF v0.0.1"])
+    module.add_named_metadata("llvm.ident", [f"PythonBPF {VERSION}"])
 
     print(f"IR written to {output}")
     with open(output, "w") as f:
