@@ -1,37 +1,37 @@
 import ast
 from llvmlite import ir
-from .type_deducer import ctypes_to_ir
-from . import dwarf_constants as dc
+from pythonbpf import dwarf_constants as dc
+from enum import Enum
+from .maps_utils import MapProcessorRegistry
+import logging
 
-map_sym_tab = {}
+logger = logging.getLogger(__name__)
 
 
 def maps_proc(tree, module, chunks):
+    """ Process all functions decorated with @map to find BPF maps """
+    map_sym_tab = {}
     for func_node in chunks:
-        # Check if this function is a map
-        is_map = False
-        for decorator in func_node.decorator_list:
-            if isinstance(decorator, ast.Name) and decorator.id == "map":
-                is_map = True
-                break
-        if is_map:
+        if is_map(func_node):
             print(f"Found BPF map: {func_node.name}")
-            process_bpf_map(func_node, module)
-            continue
+            map_sym_tab[func_node.name] = process_bpf_map(func_node, module)
     return map_sym_tab
 
 
-BPF_MAP_MAPPINGS = {
-    "HASH": 1,                # BPF_MAP_TYPE_HASH
-    "PERF_EVENT_ARRAY": 4,    # BPF_MAP_TYPE_PERF_EVENT_ARRAY
-}
+def is_map(func_node):
+    return any(
+        isinstance(decorator, ast.Name) and decorator.id == "map"
+        for decorator in func_node.decorator_list
+    )
+
+
+class BPFMapType(Enum):
+    HASH = 1
+    PERF_EVENT_ARRAY = 4
 
 
 def create_bpf_map(module, map_name, map_params):
-    """Create a BPF map in the module with the given parameters and debug info"""
-
-    map_type_str = map_params.get("type", "HASH")
-    map_type = BPF_MAP_MAPPINGS.get(map_type_str)
+    """Create a BPF map in the module with given parameters and debug info"""
 
     # Create the anonymous struct type for BPF map
     map_struct_type = ir.LiteralStructType(
@@ -42,15 +42,14 @@ def create_bpf_map(module, map_name, map_params):
     map_global.linkage = 'dso_local'
     map_global.global_constant = False
     map_global.initializer = ir.Constant(
-        map_struct_type, None)     # type: ignore
+        map_struct_type, None)
     map_global.section = ".maps"
-    map_global.align = 8        # type: ignore
+    map_global.align = 8
 
     # Generate debug info for BTF
     create_map_debug_info(module, map_global, map_name, map_params)
 
-    print(f"Created BPF map: {map_name}")
-    map_sym_tab[map_name] = map_global
+    logger.info(f"Created BPF map: {map_name} with params {map_params}")
     return map_global
 
 
@@ -75,7 +74,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
     # Create array type for map type field (array of 1 unsigned int)
     array_subrange = module.add_debug_info(
-        "DISubrange", {"count": BPF_MAP_MAPPINGS[map_params.get("type", "HASH")]})
+        "DISubrange", {"count": map_params.get("type", BPFMapType.HASH).value})
     array_type = module.add_debug_info("DICompositeType", {
         "tag": dc.DW_TAG_array_type,
         "baseType": uint_type,
@@ -183,9 +182,11 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     return global_var_expr
 
 
+@MapProcessorRegistry.register("HashMap")
 def process_hash_map(map_name, rval, module):
-    print(f"Creating HashMap map: {map_name}")
-    map_params: dict[str, object] = {"type": "HASH"}
+    """Process a BPF_HASH map declaration"""
+    logger.info(f"Processing HashMap: {map_name}")
+    map_params = {"type": BPFMapType.HASH}
 
     # Assuming order: key_type, value_type, max_entries
     if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
@@ -202,18 +203,21 @@ def process_hash_map(map_name, rval, module):
             map_params["key"] = keyword.value.id
         elif keyword.arg == "value" and isinstance(keyword.value, ast.Name):
             map_params["value"] = keyword.value.id
-        elif keyword.arg == "max_entries" and isinstance(keyword.value, ast.Constant):
+        elif (keyword.arg == "max_entries" and
+              isinstance(keyword.value, ast.Constant)):
             const_val = keyword.value.value
             if isinstance(const_val, (int, str)):
                 map_params["max_entries"] = const_val
 
-    print(f"Map parameters: {map_params}")
+    logger.info(f"Map parameters: {map_params}")
     return create_bpf_map(module, map_name, map_params)
 
 
+@MapProcessorRegistry.register("PerfEventArray")
 def process_perf_event_map(map_name, rval, module):
-    print(f"Creating PerfEventArray map: {map_name}")
-    map_params = {"type": "PERF_EVENT_ARRAY"}
+    """Process a BPF_PERF_EVENT_ARRAY map declaration"""
+    logger.info(f"Processing PerfEventArray: {map_name}")
+    map_params = {"type": BPFMapType.PERF_EVENT_ARRAY}
 
     if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
         map_params["key_size"] = rval.args[0].id
@@ -223,21 +227,18 @@ def process_perf_event_map(map_name, rval, module):
     for keyword in rval.keywords:
         if keyword.arg == "key_size" and isinstance(keyword.value, ast.Name):
             map_params["key_size"] = keyword.value.id
-        elif keyword.arg == "value_size" and isinstance(keyword.value, ast.Name):
+        elif (keyword.arg == "value_size" and
+              isinstance(keyword.value, ast.Name)):
             map_params["value_size"] = keyword.value.id
 
-    print(f"Map parameters: {map_params}")
+    logger.info(f"Map parameters: {map_params}")
     return create_bpf_map(module, map_name, map_params)
 
 
 def process_bpf_map(func_node, module):
     """Process a BPF map (a function decorated with @map)"""
     map_name = func_node.name
-    print(f"Processing BPF map: {map_name}")
-
-    BPF_MAP_TYPES = {"HashMap": process_hash_map,            # BPF_MAP_TYPE_HASH
-                     "PerfEventArray": process_perf_event_map,   # BPF_MAP_TYPE_PERF_EVENT_ARRAY
-                     }
+    logger.info(f"Processing BPF map: {map_name}")
 
     # For now, assume single return statement
     return_stmt = None
@@ -250,13 +251,13 @@ def process_bpf_map(func_node, module):
 
     rval = return_stmt.value
 
-    # Handle only HashMap maps
     if isinstance(rval, ast.Call) and isinstance(rval.func, ast.Name):
-        if rval.func.id in BPF_MAP_TYPES:
-            handler = BPF_MAP_TYPES[rval.func.id]
-            handler(map_name, rval, module)
+        handler = MapProcessorRegistry.get_processor(rval.func.id)
+        if handler:
+            return handler(map_name, rval, module)
         else:
-            print(f"Unknown map type {rval.func.id}, defaulting to HashMap")
-            process_hash_map(map_name, rval, module)
+            logger.warning(f"Unknown map type "
+                           f"{rval.func.id}, defaulting to HashMap")
+            return process_hash_map(map_name, rval, module)
     else:
         raise ValueError("Function under @map must return a map")

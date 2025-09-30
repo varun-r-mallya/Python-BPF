@@ -2,7 +2,7 @@ import ast
 from llvmlite import ir
 from .license_pass import license_processing
 from .functions_pass import func_proc
-from .maps_pass import maps_proc
+from pythonbpf.maps import maps_proc
 from .structs.structs_pass import structs_proc
 from .globals_pass import globals_processing
 import os
@@ -125,8 +125,8 @@ def BPF() -> BpfProgram:
     caller_frame = inspect.stack()[1]
     src = inspect.getsource(caller_frame.frame)
     with tempfile.NamedTemporaryFile(mode="w+", delete=True, suffix=".py") as f, \
-        tempfile.NamedTemporaryFile(mode="w+", delete=True, suffix=".ll") as inter, \
-        tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".o") as obj_file:
+            tempfile.NamedTemporaryFile(mode="w+", delete=True, suffix=".ll") as inter, \
+            tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".o") as obj_file:
         f.write(src)
         f.flush()
         source = f.name
