@@ -5,12 +5,15 @@ from .functions_pass import func_proc
 from pythonbpf.maps import maps_proc
 from .structs.structs_pass import structs_proc
 from .globals_pass import globals_processing
+from .debuginfo import DW_LANG_C11, DwarfBehaviorEnum
 import os
 import subprocess
 import inspect
 from pathlib import Path
 from pylibbpf import BpfProgram
 import tempfile
+
+VERSION = "v0.1.3"
 
 
 def find_bpf_chunks(tree):
@@ -50,16 +53,18 @@ def compile_to_ir(filename: str, output: str):
     module.triple = "bpf"
 
     if not hasattr(module, '_debug_compile_unit'):
-        module._file_metadata = module.add_debug_info("DIFile", {       # type: ignore
+        module._file_metadata = module.add_debug_info("DIFile", {  # type: ignore
             "filename": filename,
             "directory": os.path.dirname(filename)
         })
 
-        module._debug_compile_unit = module.add_debug_info("DICompileUnit", {       # type: ignore
-            "language": 29,  # DW_LANG_C11
-            "file": module._file_metadata,      # type: ignore
-            "producer": "PythonBPF DSL Compiler",
-            "isOptimized": True,
+        module._debug_compile_unit = module.add_debug_info("DICompileUnit", {  # type: ignore
+            "language": DW_LANG_C11,
+            "file": module._file_metadata,  # type: ignore
+            "producer": f"PythonBPF {VERSION}",
+            "isOptimized": True,  # TODO: This is probably not true
+            # TODO: add a global field here that keeps track of all the globals. Works without it, but I think it might
+            # be required for kprobes.
             "runtimeVersion": 0,
             "emissionKind": 1,
             "splitDebugInlining": False,
@@ -67,32 +72,32 @@ def compile_to_ir(filename: str, output: str):
         }, is_distinct=True)
 
         module.add_named_metadata(
-            "llvm.dbg.cu", module._debug_compile_unit)        # type: ignore
+            "llvm.dbg.cu", module._debug_compile_unit)  # type: ignore
 
     processor(source, filename, module)
 
-    wchar_size = module.add_metadata([ir.Constant(ir.IntType(32), 1),
+    wchar_size = module.add_metadata([DwarfBehaviorEnum.ERROR_IF_MISMATCH,
                                       "wchar_size",
                                       ir.Constant(ir.IntType(32), 4)])
-    frame_pointer = module.add_metadata([ir.Constant(ir.IntType(32), 7),
+    frame_pointer = module.add_metadata([DwarfBehaviorEnum.OVERRIDE_USE_LARGEST,
                                          "frame-pointer",
                                          ir.Constant(ir.IntType(32), 2)])
     # Add Debug Info Version (3 = DWARF v3, which LLVM expects)
-    debug_info_version = module.add_metadata([ir.Constant(ir.IntType(32), 2),
+    debug_info_version = module.add_metadata([DwarfBehaviorEnum.WARNING_IF_MISMATCH,
                                               "Debug Info Version",
                                               ir.Constant(ir.IntType(32), 3)])
 
-    # Add explicit DWARF version (4 is common, works with LLVM BPF backend)
-    dwarf_version = module.add_metadata([ir.Constant(ir.IntType(32), 2),
+    # Add explicit DWARF version 5
+    dwarf_version = module.add_metadata([DwarfBehaviorEnum.OVERRIDE_USE_LARGEST,
                                          "Dwarf Version",
-                                         ir.Constant(ir.IntType(32), 4)])
+                                         ir.Constant(ir.IntType(32), 5)])
 
     module.add_named_metadata("llvm.module.flags", wchar_size)
     module.add_named_metadata("llvm.module.flags", frame_pointer)
     module.add_named_metadata("llvm.module.flags", debug_info_version)
     module.add_named_metadata("llvm.module.flags", dwarf_version)
 
-    module.add_named_metadata("llvm.ident", ["llvmlite PythonBPF v0.0.1"])
+    module.add_named_metadata("llvm.ident", [f"PythonBPF {VERSION}"])
 
     print(f"IR written to {output}")
     with open(output, "w") as f:
