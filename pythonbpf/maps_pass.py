@@ -1,7 +1,6 @@
 import ast
 from llvmlite import ir
-from .type_deducer import ctypes_to_ir
-from . import dwarf_constants as dc
+from .debuginfo import dwarf_constants as dc
 
 map_sym_tab = {}
 
