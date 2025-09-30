@@ -258,6 +258,6 @@ def process_bpf_map(func_node, module):
         else:
             logger.warning(f"Unknown map type "
                            f"{rval.func.id}, defaulting to HashMap")
-            process_hash_map(map_name, rval, module)
+            return process_hash_map(map_name, rval, module)
     else:
         raise ValueError("Function under @map must return a map")
