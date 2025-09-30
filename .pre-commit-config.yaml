@@ -35,13 +35,13 @@ repos:
   - id: requirements-txt-fixer
   - id: trailing-whitespace
 
-#- repo: https://github.com/astral-sh/ruff-pre-commit
-#  rev: "v0.4.2"
-#  hooks:
-#    - id: ruff
-#      args: ["--fix", "--show-fixes"]
-#    - id: ruff-format
-#      exclude: ^(docs)
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: "v0.4.2"
+  hooks:
+    - id: ruff
+      args: ["--fix", "--show-fixes"]
+    - id: ruff-format
+      exclude: ^(docs)
 
 ## Checking static types
 #- repo: https://github.com/pre-commit/mirrors-mypy

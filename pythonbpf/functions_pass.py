@@ -674,7 +674,7 @@ def assign_string_to_array(builder, target_array_ptr, source_string_ptr, array_l
     Copy a string (i8*) to a fixed-size array ([N x i8]*)
     """
     # Create a loop to copy characters one by one
-    entry_block = builder.block
+    # entry_block = builder.block
     copy_block = builder.append_basic_block("copy_char")
     end_block = builder.append_basic_block("copy_end")
 

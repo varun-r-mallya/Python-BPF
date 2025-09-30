@@ -7,6 +7,7 @@ from ctypes import c_void_p, c_int64
 @section("sometag1")
 def sometag(ctx: c_void_p) -> c_int64:
     a = 1 + 2
+    print(f"{a}")
     return c_int64(0)
 
 
