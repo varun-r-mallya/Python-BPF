@@ -1,19 +1,17 @@
 import ast
 from llvmlite import ir
-from pythonbpf.type_deducer import ctypes_to_ir
 from pythonbpf import dwarf_constants as dc
 from enum import Enum
 from .maps_utils import MapProcessorRegistry
 
-map_sym_tab = {}
-
 
 def maps_proc(tree, module, chunks):
+    """ Process all functions decorated with @map to find BPF maps """
+    map_sym_tab = {}
     for func_node in chunks:
         if is_map(func_node):
             print(f"Found BPF map: {func_node.name}")
-            process_bpf_map(func_node, module)
-            continue
+            map_sym_tab[func_node.name] = process_bpf_map(func_node, module)
     return map_sym_tab
 
 
@@ -30,9 +28,7 @@ class BPFMapType(Enum):
 
 
 def create_bpf_map(module, map_name, map_params):
-    """Create a BPF map in the module with the given parameters and debug info"""
-
-    map_type = map_params.get("type", BPFMapType.HASH).value
+    """Create a BPF map in the module with given parameters and debug info"""
 
     # Create the anonymous struct type for BPF map
     map_struct_type = ir.LiteralStructType(
@@ -43,15 +39,14 @@ def create_bpf_map(module, map_name, map_params):
     map_global.linkage = 'dso_local'
     map_global.global_constant = False
     map_global.initializer = ir.Constant(
-        map_struct_type, None)     # type: ignore
+        map_struct_type, None)
     map_global.section = ".maps"
-    map_global.align = 8        # type: ignore
+    map_global.align = 8
 
     # Generate debug info for BTF
     create_map_debug_info(module, map_global, map_name, map_params)
 
     print(f"Created BPF map: {map_name}")
-    map_sym_tab[map_name] = map_global
     return map_global
 
 
@@ -186,6 +181,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
 @MapProcessorRegistry.register("HashMap")
 def process_hash_map(map_name, rval, module):
+    """Process a BPF_HASH map declaration"""
     print(f"Creating HashMap map: {map_name}")
     map_params = {"type": BPFMapType.HASH}
 
@@ -204,7 +200,8 @@ def process_hash_map(map_name, rval, module):
             map_params["key"] = keyword.value.id
         elif keyword.arg == "value" and isinstance(keyword.value, ast.Name):
             map_params["value"] = keyword.value.id
-        elif keyword.arg == "max_entries" and isinstance(keyword.value, ast.Constant):
+        elif keyword.arg == "max_entries" and \
+                isinstance(keyword.value, ast.Constant):
             const_val = keyword.value.value
             if isinstance(const_val, (int, str)):
                 map_params["max_entries"] = const_val
@@ -215,6 +212,7 @@ def process_hash_map(map_name, rval, module):
 
 @MapProcessorRegistry.register("PerfEventArray")
 def process_perf_event_map(map_name, rval, module):
+    """Process a BPF_PERF_EVENT_ARRAY map declaration"""
     print(f"Creating PerfEventArray map: {map_name}")
     map_params = {"type": BPFMapType.PERF_EVENT_ARRAY}
 
@@ -226,7 +224,8 @@ def process_perf_event_map(map_name, rval, module):
     for keyword in rval.keywords:
         if keyword.arg == "key_size" and isinstance(keyword.value, ast.Name):
             map_params["key_size"] = keyword.value.id
-        elif keyword.arg == "value_size" and isinstance(keyword.value, ast.Name):
+        elif keyword.arg == "value_size" and \
+                isinstance(keyword.value, ast.Name):
             map_params["value_size"] = keyword.value.id
 
     print(f"Map parameters: {map_params}")
@@ -249,11 +248,10 @@ def process_bpf_map(func_node, module):
 
     rval = return_stmt.value
 
-    # Handle only HashMap maps
     if isinstance(rval, ast.Call) and isinstance(rval.func, ast.Name):
         handler = MapProcessorRegistry.get_processor(rval.func.id)
         if handler:
-            handler(map_name, rval, module)
+            return handler(map_name, rval, module)
         else:
             print(f"Unknown map type {rval.func.id}, defaulting to HashMap")
             process_hash_map(map_name, rval, module)
