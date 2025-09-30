@@ -6,9 +6,9 @@ from ctypes import c_void_p, c_int64
 
 # Instructions to how to run this program
 # 1. Install PythonBPF: pip install pythonbpf
-# 2. Run the program: python demo/pybpf1.py
-# 3. Run the program with sudo: sudo examples/check.sh run demo/pybpf1.o
-# 4. Attach object file to any network device with something like ./check.sh xdp ../demo/pybpf1.o tailscale0
+# 2. Run the program: python examples/xdp_pass.py
+# 3. Run the program with sudo: sudo tools/check.sh run examples/xdp_pass.o
+# 4. Attach object file to any network device with something like ./check.sh xdp examples/xdp_pass.o tailscale0
 # 5. send traffic through the device and observe effects
 
 @bpf
