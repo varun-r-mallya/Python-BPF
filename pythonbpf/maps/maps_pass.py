@@ -46,9 +46,6 @@ def create_bpf_map(module, map_name, map_params):
     map_global.section = ".maps"
     map_global.align = 8
 
-    # Generate debug info for BTF
-    create_map_debug_info(module, map_global, map_name, map_params)
-
     logger.info(f"Created BPF map: {map_name} with params {map_params}")
     return map_global
 
@@ -130,7 +127,10 @@ def process_hash_map(map_name, rval, module):
                 map_params["max_entries"] = const_val
 
     logger.info(f"Map parameters: {map_params}")
-    return create_bpf_map(module, map_name, map_params)
+    map_global = create_bpf_map(module, map_name, map_params)
+    # Generate debug info for BTF
+    create_map_debug_info(module, map_global, map_name, map_params)
+    return map_global
 
 
 @MapProcessorRegistry.register("PerfEventArray")
@@ -152,7 +152,10 @@ def process_perf_event_map(map_name, rval, module):
             map_params["value_size"] = keyword.value.id
 
     logger.info(f"Map parameters: {map_params}")
-    return create_bpf_map(module, map_name, map_params)
+    map_global = create_bpf_map(module, map_name, map_params)
+    # Generate debug info for BTF
+    create_map_debug_info(module, map_global, map_name, map_params)
+    return map_global
 
 
 def process_bpf_map(func_node, module):
