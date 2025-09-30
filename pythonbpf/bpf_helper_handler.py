@@ -1,6 +1,17 @@
 import ast
 from llvmlite import ir
 from .expr_pass import eval_expr
+from enum import Enum
+
+
+class BPFHelperID(Enum):
+    BPF_MAP_LOOKUP_ELEM = 1
+    BPF_MAP_UPDATE_ELEM = 2
+    BPF_MAP_DELETE_ELEM = 3
+    BPF_KTIME_GET_NS = 5
+    BPF_PRINTK = 6
+    BPF_GET_CURRENT_PID_TGID = 14
+    BPF_PERF_EVENT_OUTPUT = 25
 
 
 def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab=None, struct_sym_tab=None, local_var_metadata=None):
