@@ -19,7 +19,7 @@ def bpf_ktime_get_ns_emitter(call, map_ptr, module, builder, func, local_sym_tab
     Emit LLVM IR for bpf_ktime_get_ns helper function call.
     """
     # func is an arg to just have a uniform signature with other emitters
-    helper_id = ir.Constant(ir.IntType(64), 5)
+    helper_id = ir.Constant(ir.IntType(64), BPFHelperID.BPF_KTIME_GET_NS.value)
     fn_type = ir.FunctionType(ir.IntType(64), [], var_arg=False)
     fn_ptr_type = ir.PointerType(fn_type)
     fn_ptr = builder.inttoptr(helper_id, fn_ptr_type)
@@ -66,7 +66,7 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     fn_ptr_type = ir.PointerType(fn_type)
 
     # Helper ID 1 is bpf_map_lookup_elem
-    fn_addr = ir.Constant(ir.IntType(64), 1)
+    fn_addr = ir.Constant(ir.IntType(64), BPFHelperID.BPF_MAP_LOOKUP_ELEM.value)
     fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
 
     result = builder.call(fn_ptr, [map_void_ptr, key_ptr], tail=False)
@@ -225,7 +225,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func, local_sym_tab=None,
             fn_type = ir.FunctionType(ir.IntType(
                 64), [ir.PointerType(), ir.IntType(32)], var_arg=True)
             fn_ptr_type = ir.PointerType(fn_type)
-            fn_addr = ir.Constant(ir.IntType(64), 6)
+            fn_addr = ir.Constant(ir.IntType(64), BPFHelperID.BPF_PRINTK.value)
             fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
 
             builder.call(fn_ptr, [fmt_ptr, ir.Constant(
@@ -315,7 +315,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     fn_ptr_type = ir.PointerType(fn_type)
 
     # helper id
-    fn_addr = ir.Constant(ir.IntType(64), 2)
+    fn_addr = ir.Constant(ir.IntType(64), BPFHelperID.BPF_MAP_UPDATE_ELEM.value)
     fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
 
     if isinstance(flags_val, int):
@@ -375,7 +375,7 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func, local_sym_
     fn_ptr_type = ir.PointerType(fn_type)
 
     # Helper ID 3 is bpf_map_delete_elem
-    fn_addr = ir.Constant(ir.IntType(64), 3)
+    fn_addr = ir.Constant(ir.IntType(64), BPFHelperID.BPF_MAP_DELETE_ELEM.value)
     fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
 
     # Call the helper function
@@ -389,7 +389,7 @@ def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func, local
     Emit LLVM IR for bpf_get_current_pid_tgid helper function call.
     """
     # func is an arg to just have a uniform signature with other emitters
-    helper_id = ir.Constant(ir.IntType(64), 14)
+    helper_id = ir.Constant(ir.IntType(64), BPFHelperID.BPF_GET_CURRENT_PID_TGID.value)
     fn_type = ir.FunctionType(ir.IntType(64), [], var_arg=False)
     fn_ptr_type = ir.PointerType(fn_type)
     fn_ptr = builder.inttoptr(helper_id, fn_ptr_type)
@@ -442,7 +442,7 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func, local_sy
         fn_ptr_type = ir.PointerType(fn_type)
 
         # helper id
-        fn_addr = ir.Constant(ir.IntType(64), 25)
+        fn_addr = ir.Constant(ir.IntType(64), BPFHelperID.BPF_PERF_EVENT_OUTPUT.value)
         fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
 
         result = builder.call(
