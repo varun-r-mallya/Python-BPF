@@ -251,7 +251,7 @@ def process_bpf_map(func_node, module):
 
     # Handle only HashMap maps
     if isinstance(rval, ast.Call) and isinstance(rval.func, ast.Name):
-        handler = MapProcessorRegistry.get(rval.func.id)
+        handler = MapProcessorRegistry.get_processor(rval.func.id)
         if handler:
             handler(map_name, rval, module)
         else:
