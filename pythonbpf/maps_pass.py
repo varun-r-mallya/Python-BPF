@@ -8,17 +8,18 @@ map_sym_tab = {}
 
 def maps_proc(tree, module, chunks):
     for func_node in chunks:
-        # Check if this function is a map
-        is_map = False
-        for decorator in func_node.decorator_list:
-            if isinstance(decorator, ast.Name) and decorator.id == "map":
-                is_map = True
-                break
-        if is_map:
+        if is_map(func_node):
             print(f"Found BPF map: {func_node.name}")
             process_bpf_map(func_node, module)
             continue
     return map_sym_tab
+
+
+def is_map(func_node):
+    return any(
+        isinstance(decorator, ast.Name) and decorator.id == "map"
+        for decorator in func_node.decorator_list
+    )
 
 
 BPF_MAP_MAPPINGS = {
