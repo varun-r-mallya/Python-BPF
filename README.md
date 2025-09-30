@@ -1,4 +1,18 @@
-# Python-BPF
+<img src="https://github.com/user-attachments/assets/b175bf39-23cb-475d-a6e1-7b5c99a1ed72" alt="pythonbpf" width="450">
+<!-- Badges -->
+<p align="center">
+  <!-- PyPI -->
+  <a href="https://pypi.org/project/pythonbpf/"><img src="https://img.shields.io/pypi/v/pythonbpf?color=blue" alt="PyPI version"></a>
+  <!-- <a href="https://pypi.org/project/pythonbpf/"><img src="https://img.shields.io/pypi/pyversions/pythonbpf" alt="Python versions"></a> -->
+  <!-- <a href="https://pypi.org/project/pythonbpf/"><img src="https://img.shields.io/pypi/dm/pythonbpf" alt="PyPI downloads"></a> -->
+  <!-- <a href="https://pypi.org/project/pythonbpf/"><img src="https://img.shields.io/pypi/status/pythonbpf" alt="PyPI Status"></a> -->
+  <a href="https://pepy.tech/project/pythonbpf"><img src="https://pepy.tech/badge/pythonbpf" alt="Downloads"></a>
+  <!-- Build & CI -->
+  <a href="https://github.com/pythonbpf/python-bpf/actions"><img src="https://github.com/pythonbpf/python-bpf/actions/workflows/python-publish.yml/badge.svg" alt="Build Status"></a>
+  <!-- Meta -->
+  <a href="https://github.com/pythonbpf/python-bpf/blob/main/LICENSE"><img src="https://img.shields.io/github/license/pythonbpf/python-bpf" alt="License"></a>
+</p>
+
 
 Python-BPF is an LLVM IR generator for eBPF programs written in Python. It uses [llvmlite](https://github.com/numba/llvmlite) to generate LLVM IR and then compiles to LLVM object files. These object files can be loaded into the kernel for execution. Unlike BCC, Python-BPF performs compilation without relying on its infrastructure.
 
