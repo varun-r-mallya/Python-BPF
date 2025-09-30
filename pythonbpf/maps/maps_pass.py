@@ -55,53 +55,15 @@ def create_bpf_map(module, map_name, map_params):
 
 def create_map_debug_info(module, map_global, map_name, map_params):
     """Generate debug information metadata for BPF map"""
-    file_metadata = module._file_metadata
-    compile_unit = module._debug_compile_unit
+    generator = DebugInfoGenerator(module)
 
-    # Create basic type for unsigned int (32-bit)
-    uint_type = module.add_debug_info("DIBasicType", {
-        "name": "unsigned int",
-        "size": 32,
-        "encoding": dc.DW_ATE_unsigned
-    })
+    uint_type = generator.get_uint32_type()
+    ulong_type = generator.get_uint64_type()
+    array_type = generator.create_array_type(uint_type, map_params.get("type", BPFMapType.HASH).value)
+    type_ptr = generator.create_pointer_type(array_type, 64)
+    key_ptr = generator.create_pointer_type(array_type if "key_size" in map_params else ulong_type, 64)
+    value_ptr = generator.create_pointer_type(array_type if "value_size" in map_params else ulong_type, 64)
 
-    # Create basic type for unsigned long long (64-bit)
-    ulong_type = module.add_debug_info("DIBasicType", {
-        "name": "unsigned long long",
-        "size": 64,
-        "encoding": dc.DW_ATE_unsigned
-    })
-
-    # Create array type for map type field (array of 1 unsigned int)
-    array_subrange = module.add_debug_info(
-        "DISubrange", {"count": map_params.get("type", BPFMapType.HASH).value})
-    array_type = module.add_debug_info("DICompositeType", {
-        "tag": dc.DW_TAG_array_type,
-        "baseType": uint_type,
-        "size": 32,
-        "elements": [array_subrange]
-    })
-
-    # Create pointer types
-    type_ptr = module.add_debug_info("DIDerivedType", {
-        "tag": dc.DW_TAG_pointer_type,
-        "baseType": array_type,
-        "size": 64
-    })
-
-    key_ptr = module.add_debug_info("DIDerivedType", {
-        "tag": dc.DW_TAG_pointer_type,
-        # Adjust based on actual key type
-        "baseType": array_type if "key_size" in map_params else uint_type,
-        "size": 64
-    })
-
-    value_ptr = module.add_debug_info("DIDerivedType", {
-        "tag": dc.DW_TAG_pointer_type,
-        # Adjust based on actual value type
-        "baseType": array_type if "value_size" in map_params else ulong_type,
-        "size": 64
-    })
 
     elements_arr = []
 
@@ -117,69 +79,27 @@ def create_map_debug_info(module, map_global, map_name, map_params):
             ptr = key_ptr
         else:
             ptr = value_ptr
-        member = module.add_debug_info("DIDerivedType", {
-            "tag": dc.DW_TAG_member,
-            "name": elem,
-            "file": file_metadata,
-            "baseType": ptr,
-            "size": 64,
-            "offset": cnt * 64
-        })
+        # TODO: the best way to do this is not 64, but get the size each time. this will not work for structs.
+        member = generator.create_struct_member(elem, ptr, cnt * 64)
         elements_arr.append(member)
         cnt += 1
 
     if "max_entries" in map_params:
-        array_subrange_max_entries = module.add_debug_info(
-            "DISubrange", {"count": map_params["max_entries"]})
-        array_type_max_entries = module.add_debug_info("DICompositeType", {
-            "tag": dc.DW_TAG_array_type,
-            "baseType": uint_type,
-            "size": 32,
-            "elements": [array_subrange_max_entries]
-        })
-        max_entries_ptr = module.add_debug_info("DIDerivedType", {
-            "tag": dc.DW_TAG_pointer_type,
-            "baseType": array_type_max_entries,
-            "size": 64
-        })
-        max_entries_member = module.add_debug_info("DIDerivedType", {
-            "tag": dc.DW_TAG_member,
-            "name": "max_entries",
-            "file": file_metadata,
-            "baseType": max_entries_ptr,
-            "size": 64,
-            "offset": cnt * 64
-        })
+        max_entries_array = generator.create_array_type(uint_type, map_params["max_entries"])
+        max_entries_ptr = generator.create_pointer_type(max_entries_array, 64)
+        max_entries_member = generator.create_struct_member("max_entries", max_entries_ptr, cnt * 64)
         elements_arr.append(max_entries_member)
 
     # Create the struct type
-    struct_type = module.add_debug_info("DICompositeType", {
-        "tag": dc.DW_TAG_structure_type,
-        "file": file_metadata,
-        "size": 64 * len(elements_arr),  # 4 * 64-bit pointers
-        "elements": elements_arr,
-    }, is_distinct=True)
+    struct_type = generator.create_struct_type(elements_arr, 64 * len(elements_arr), is_distinct=True)
 
     # Create global variable debug info
-    global_var = module.add_debug_info("DIGlobalVariable", {
-        "name": map_name,
-        "scope": compile_unit,
-        "file": file_metadata,
-        "type": struct_type,
-        "isLocal": False,
-        "isDefinition": True
-    }, is_distinct=True)
-
-    # Create global variable expression
-    global_var_expr = module.add_debug_info("DIGlobalVariableExpression", {
-        "var": global_var,
-        "expr": module.add_debug_info("DIExpression", {})
-    })
+    global_var = generator.create_global_var_debug_info(map_name, struct_type, is_local=False)
 
     # Attach debug info to the global variable
-    map_global.set_metadata("dbg", global_var_expr)
+    map_global.set_metadata("dbg", global_var)
 
-    return global_var_expr
+    return global_var
 
 
 @MapProcessorRegistry.register("HashMap")
