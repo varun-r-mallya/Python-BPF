@@ -2,6 +2,7 @@ import ast
 from llvmlite import ir
 from .type_deducer import ctypes_to_ir
 from . import dwarf_constants as dc
+from enum import Enum
 
 map_sym_tab = {}
 
@@ -20,6 +21,11 @@ def is_map(func_node):
         isinstance(decorator, ast.Name) and decorator.id == "map"
         for decorator in func_node.decorator_list
     )
+
+
+class BPFMapType(Enum):
+    HASH = 1
+    PERF_EVENT_ARRAY = 4
 
 
 BPF_MAP_MAPPINGS = {
@@ -186,7 +192,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 
 def process_hash_map(map_name, rval, module):
     print(f"Creating HashMap map: {map_name}")
-    map_params: dict[str, object] = {"type": "HASH"}
+    map_params: = {"type": BPFMapType.HASH}
 
     # Assuming order: key_type, value_type, max_entries
     if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
@@ -214,7 +220,7 @@ def process_hash_map(map_name, rval, module):
 
 def process_perf_event_map(map_name, rval, module):
     print(f"Creating PerfEventArray map: {map_name}")
-    map_params = {"type": "PERF_EVENT_ARRAY"}
+    map_params = {"type": BPFMapType.PERF_EVENT_ARRAY}
 
     if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
         map_params["key_size"] = rval.args[0].id
