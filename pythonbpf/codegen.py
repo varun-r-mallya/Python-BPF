@@ -62,7 +62,9 @@ def compile_to_ir(filename: str, output: str):
             "language": DW_LANG_C11,
             "file": module._file_metadata,  # type: ignore
             "producer": f"PythonBPF {VERSION}",
-            "isOptimized": True,
+            "isOptimized": True,  # TODO: This is probably not true
+            # TODO: add a global field here that keeps track of all the globals. Works without it, but I think it might
+            # be required for kprobes.
             "runtimeVersion": 0,
             "emissionKind": 1,
             "splitDebugInlining": False,
