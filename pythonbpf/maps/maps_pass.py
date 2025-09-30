@@ -3,6 +3,9 @@ from llvmlite import ir
 from pythonbpf import dwarf_constants as dc
 from enum import Enum
 from .maps_utils import MapProcessorRegistry
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def maps_proc(tree, module, chunks):
@@ -46,7 +49,7 @@ def create_bpf_map(module, map_name, map_params):
     # Generate debug info for BTF
     create_map_debug_info(module, map_global, map_name, map_params)
 
-    print(f"Created BPF map: {map_name}")
+    logger.info(f"Created BPF map: {map_name} with params {map_params}")
     return map_global
 
 
@@ -182,7 +185,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
 @MapProcessorRegistry.register("HashMap")
 def process_hash_map(map_name, rval, module):
     """Process a BPF_HASH map declaration"""
-    print(f"Creating HashMap map: {map_name}")
+    logger.info(f"Processing HashMap: {map_name}")
     map_params = {"type": BPFMapType.HASH}
 
     # Assuming order: key_type, value_type, max_entries
@@ -206,14 +209,14 @@ def process_hash_map(map_name, rval, module):
             if isinstance(const_val, (int, str)):
                 map_params["max_entries"] = const_val
 
-    print(f"Map parameters: {map_params}")
+    logger.info(f"Map parameters: {map_params}")
     return create_bpf_map(module, map_name, map_params)
 
 
 @MapProcessorRegistry.register("PerfEventArray")
 def process_perf_event_map(map_name, rval, module):
     """Process a BPF_PERF_EVENT_ARRAY map declaration"""
-    print(f"Creating PerfEventArray map: {map_name}")
+    logger.info(f"Processing PerfEventArray: {map_name}")
     map_params = {"type": BPFMapType.PERF_EVENT_ARRAY}
 
     if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Name):
@@ -228,14 +231,14 @@ def process_perf_event_map(map_name, rval, module):
                 isinstance(keyword.value, ast.Name):
             map_params["value_size"] = keyword.value.id
 
-    print(f"Map parameters: {map_params}")
+    logger.info(f"Map parameters: {map_params}")
     return create_bpf_map(module, map_name, map_params)
 
 
 def process_bpf_map(func_node, module):
     """Process a BPF map (a function decorated with @map)"""
     map_name = func_node.name
-    print(f"Processing BPF map: {map_name}")
+    logger.info(f"Processing BPF map: {map_name}")
 
     # For now, assume single return statement
     return_stmt = None
@@ -253,7 +256,8 @@ def process_bpf_map(func_node, module):
         if handler:
             return handler(map_name, rval, module)
         else:
-            print(f"Unknown map type {rval.func.id}, defaulting to HashMap")
+            logger.warning(f"Unknown map type {
+                           rval.func.id}, defaulting to HashMap")
             process_hash_map(map_name, rval, module)
     else:
         raise ValueError("Function under @map must return a map")
