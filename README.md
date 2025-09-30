@@ -14,7 +14,7 @@
 </p>
 
 
-Python-BPF is an LLVM IR generator for eBPF programs written in Python. It uses [llvmlite](https://github.com/numba/llvmlite) to generate LLVM IR and then compiles to LLVM object files. These object files can be loaded into the kernel for execution. Unlike BCC, Python-BPF performs compilation without relying on its infrastructure.
+Python-BPF is an LLVM IR generator for eBPF programs written in Python. It uses [llvmlite](https://github.com/numba/llvmlite) to generate LLVM IR and then compiles to LLVM object files. These object files can be loaded into the kernel for execution. Python-BPF performs compilation without relying on BCC.
 
 > **Note**: This project is under active development and not ready for production use.
 
@@ -159,23 +159,17 @@ This architecture eliminates the need for embedding C code in Python, allowing f
    ```bash
    make install
    ```
-
-3. Build and test examples:
-
-   ```bash
-   make
-   ```
-
-4. Verify an object file with the kernel verifier:
+   Then, run any example in `examples`
+3. Verify an object file with the kernel verifier:
 
    ```bash
-   ./check.sh check execve2.o
+   ./tools/check.sh check execve2.o
    ```
 
 5. Run an object file using `bpftool`:
 
    ```bash
-   ./check.sh run execve2.o
+   ./tools/check.sh run execve2.o
    ```
 
 6. Explore LLVM IR output from clang in `examples/c-form` by running `make`.
