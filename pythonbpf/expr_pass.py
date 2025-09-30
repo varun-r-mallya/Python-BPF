@@ -23,7 +23,7 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
             return None
     elif isinstance(expr, ast.Call):
         # delayed import to avoid circular dependency
-        from .helper.bpf_helper_handler import helper_func_list, handle_helper_call
+        from pythonbpf.helper import HelperHandlerRegistry, handle_helper_call
 
         if isinstance(expr.func, ast.Name):
             # check deref
@@ -50,21 +50,21 @@ def eval_expr(func, module, builder, expr, local_sym_tab, map_sym_tab, structs_s
                 return val, local_sym_tab[expr.args[0].id][1]
 
             # check for helpers
-            if expr.func.id in helper_func_list:
+            if expr.func.id in HelperHandlerRegistry._handlers:
                 return handle_helper_call(
                     expr, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
         elif isinstance(expr.func, ast.Attribute):
             print(f"Handling method call: {ast.dump(expr.func)}")
             if isinstance(expr.func.value, ast.Call) and isinstance(expr.func.value.func, ast.Name):
                 method_name = expr.func.attr
-                if method_name in helper_func_list:
+                if method_name in HelperHandlerRegistry._handlers:
                     return handle_helper_call(
                         expr, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
             elif isinstance(expr.func.value, ast.Name):
                 obj_name = expr.func.value.id
                 method_name = expr.func.attr
                 if obj_name in map_sym_tab:
-                    if method_name in helper_func_list:
+                    if method_name in HelperHandlerRegistry._handlers:
                         return handle_helper_call(
                             expr, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
     elif isinstance(expr, ast.Attribute):
