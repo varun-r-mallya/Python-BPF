@@ -81,7 +81,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func,
                                     local_var_metadata)
     elif (isinstance(call.args[0], ast.Constant) and
           isinstance(call.args[0].value, str)):
-        # TODO: We are onbly supporting single arguments for now.
+        # TODO: We are only supporting single arguments for now.
         # In case of multiple args, the first one will be taken.
         args = simple_string_print(call.args[0].value, module, builder, func)
     else:

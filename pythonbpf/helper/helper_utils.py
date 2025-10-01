@@ -234,7 +234,6 @@ def _prepare_expr_args(expr, func, module, builder,
                        local_sym_tab, struct_sym_tab,
                        local_var_metadata):
     """Evaluate and prepare an expression to use as an arg for bpf_printk."""
-    print(f"{ast.dump(expr)}")
     val, _ = eval_expr(func, module, builder, expr,
                        local_sym_tab, None, struct_sym_tab,
                        local_var_metadata)
