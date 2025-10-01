@@ -1,3 +1,4 @@
+# This file provides type  and function hints only and does not actually give any functionality.
 class HashMap:
     def __init__(self, key, value, max_entries):
         self.key = key
@@ -33,3 +34,18 @@ class PerfEventArray:
 
     def output(self, data):
         pass  # Placeholder for output method
+
+
+class RingBuf:
+    def __init__(self, max_entries):
+        self.max_entries = max_entries
+
+    def reserve(self, size: int, flags=0):
+        if size > self.max_entries:
+            raise ValueError("size cannot be greater than set maximum entries")
+        return 0
+
+    def submit(self, data, flags=0):
+        pass
+
+    # add discard, output and also give names to flags and stuff

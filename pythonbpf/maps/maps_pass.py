@@ -1,11 +1,12 @@
 import ast
+from logging import Logger
 from llvmlite import ir
 from enum import Enum
 from .maps_utils import MapProcessorRegistry
 from ..debuginfo import DebugInfoGenerator
 import logging
 
-logger = logging.getLogger(__name__)
+logger: Logger = logging.getLogger(__name__)
 
 
 def maps_proc(tree, module, chunks):
@@ -13,7 +14,7 @@ def maps_proc(tree, module, chunks):
     map_sym_tab = {}
     for func_node in chunks:
         if is_map(func_node):
-            print(f"Found BPF map: {func_node.name}")
+            logger.info(f"Found BPF map: {func_node.name}")
             map_sym_tab[func_node.name] = process_bpf_map(func_node, module)
     return map_sym_tab
 
@@ -26,8 +27,41 @@ def is_map(func_node):
 
 
 class BPFMapType(Enum):
+    UNSPEC = 0
     HASH = 1
+    ARRAY = 2
+    PROG_ARRAY = 3
     PERF_EVENT_ARRAY = 4
+    PERCPU_HASH = 5
+    PERCPU_ARRAY = 6
+    STACK_TRACE = 7
+    CGROUP_ARRAY = 8
+    LRU_HASH = 9
+    LRU_PERCPU_HASH = 10
+    LPM_TRIE = 11
+    ARRAY_OF_MAPS = 12
+    HASH_OF_MAPS = 13
+    DEVMAP = 14
+    SOCKMAP = 15
+    CPUMAP = 16
+    XSKMAP = 17
+    SOCKHASH = 18
+    CGROUP_STORAGE_DEPRECATED = 19
+    CGROUP_STORAGE = 19
+    REUSEPORT_SOCKARRAY = 20
+    PERCPU_CGROUP_STORAGE_DEPRECATED = 21
+    PERCPU_CGROUP_STORAGE = 21
+    QUEUE = 22
+    STACK = 23
+    SK_STORAGE = 24
+    DEVMAP_HASH = 25
+    STRUCT_OPS = 26
+    RINGBUF = 27
+    INODE_STORAGE = 28
+    TASK_STORAGE = 29
+    BLOOM_FILTER = 30
+    USER_RINGBUF = 31
+    CGRP_STORAGE = 32
 
 
 def create_bpf_map(module, map_name, map_params):
@@ -51,7 +85,7 @@ def create_bpf_map(module, map_name, map_params):
 
 
 def create_map_debug_info(module, map_global, map_name, map_params):
-    """Generate debug information metadata for BPF map"""
+    """Generate debug information metadata for BPF maps HASH and PERF_EVENT_ARRAY"""
     generator = DebugInfoGenerator(module)
 
     uint_type = generator.get_uint32_type()
@@ -110,6 +144,60 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     map_global.set_metadata("dbg", global_var)
 
     return global_var
+
+
+def create_ringbuf_debug_info(module, map_global, map_name, map_params):
+    """Generate debug information metadata for BPF RINGBUF map"""
+    generator = DebugInfoGenerator(module)
+
+    int_type = generator.get_int32_type()
+
+    type_array = generator.create_array_type(
+        int_type, map_params.get("type", BPFMapType.RINGBUF).value
+    )
+    type_ptr = generator.create_pointer_type(type_array, 64)
+    type_member = generator.create_struct_member("type", type_ptr, 0)
+
+    max_entries_array = generator.create_array_type(int_type, map_params["max_entries"])
+    max_entries_ptr = generator.create_pointer_type(max_entries_array, 64)
+    max_entries_member = generator.create_struct_member(
+        "max_entries", max_entries_ptr, 64
+    )
+
+    elements_arr = [type_member, max_entries_member]
+
+    struct_type = generator.create_struct_type(elements_arr, 128, is_distinct=True)
+
+    global_var = generator.create_global_var_debug_info(
+        map_name, struct_type, is_local=False
+    )
+    map_global.set_metadata("dbg", global_var)
+    return global_var
+
+
+@MapProcessorRegistry.register("RingBuf")
+def process_ringbuf_map(map_name, rval, module):
+    """Process a BPF_RINGBUF map declaration"""
+    logger.info(f"Processing Ringbuf: {map_name}")
+    map_params = {"type": BPFMapType.RINGBUF}
+
+    # Parse max_entries if present
+    if len(rval.args) >= 1 and isinstance(rval.args[0], ast.Constant):
+        const_val = rval.args[0].value
+        if isinstance(const_val, int):
+            map_params["max_entries"] = const_val
+
+    for keyword in rval.keywords:
+        if keyword.arg == "max_entries" and isinstance(keyword.value, ast.Constant):
+            const_val = keyword.value.value
+            if isinstance(const_val, int):
+                map_params["max_entries"] = const_val
+
+    logger.info(f"Ringbuf map parameters: {map_params}")
+
+    map_global = create_bpf_map(module, map_name, map_params)
+    create_ringbuf_debug_info(module, map_global, map_name, map_params)
+    return map_global
 
 
 @MapProcessorRegistry.register("HashMap")
