@@ -61,7 +61,7 @@ def handle_assign(
             struct_info = structs_sym_tab[struct_type]
             if field_name in struct_info.fields:
                 field_ptr = struct_info.gep(
-                    builder, local_sym_tab[var_name][0], field_name
+                    builder, local_sym_tab[var_name].var, field_name
                 )
                 val = eval_expr(
                     func,
@@ -106,7 +106,6 @@ def handle_assign(
             builder.store(
                 ir.Constant(ir.IntType(64), rval.value), local_sym_tab[var_name].var
             )
-            # local_sym_tab[var_name] = var
             print(f"Assigned constant {rval.value} to {var_name}")
         elif isinstance(rval.value, str):
             str_val = rval.value.encode("utf-8") + b"\x00"

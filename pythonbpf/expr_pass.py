@@ -14,9 +14,9 @@ def eval_expr(
     print(f"Evaluating expression: {ast.dump(expr)}")
     if isinstance(expr, ast.Name):
         if expr.id in local_sym_tab:
-            var = local_sym_tab[expr.id][0]
+            var = local_sym_tab[expr.id].var
             val = builder.load(var)
-            return val, local_sym_tab[expr.id][1]  # return value and type
+            return val, local_sym_tab[expr.id].ir_type  # return value and type
         else:
             print(f"Undefined variable {expr.id}")
             return None
@@ -49,7 +49,7 @@ def eval_expr(
                     return None
                 if isinstance(arg, ast.Name):
                     if arg.id in local_sym_tab:
-                        arg = local_sym_tab[arg.id][0]
+                        arg = local_sym_tab[arg.id].var
                     else:
                         print(f"Undefined variable {arg.id}")
                         return None
@@ -58,7 +58,7 @@ def eval_expr(
                     return None
                 # Since we are handling only name case, directly take type from sym tab
                 val = builder.load(arg)
-                return val, local_sym_tab[expr.args[0].id][1]
+                return val, local_sym_tab[expr.args[0].id].ir_type
 
             # check for helpers
             if HelperHandlerRegistry.has_handler(expr.func.id):
@@ -106,10 +106,10 @@ def eval_expr(
             var_name = expr.value.id
             attr_name = expr.attr
             if var_name in local_sym_tab:
-                var_ptr, var_type = local_sym_tab[var_name]
-                print(f"Loading attribute " f"{attr_name} from variable {var_name}")
+                var_ptr, var_type, var_metadata = local_sym_tab[var_name]
+                print(f"Loading attribute {attr_name} from variable {var_name}")
                 print(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
-                metadata = structs_sym_tab[local_sym_tab[var_name].metadata]
+                metadata = structs_sym_tab[var_metadata]
                 if attr_name in metadata.fields:
                     gep = metadata.gep(builder, var_ptr, attr_name)
                     val = builder.load(gep)
