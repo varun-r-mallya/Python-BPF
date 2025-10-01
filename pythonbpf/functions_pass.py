@@ -1,13 +1,13 @@
 from llvmlite import ir
 import ast
-
+from typing import Any
 
 from .bpf_helper_handler import helper_func_list, handle_helper_call
 from .type_deducer import ctypes_to_ir
 from .binary_ops import handle_binary_op
 from .expr_pass import eval_expr, handle_expr
 
-local_var_metadata = {}
+local_var_metadata: dict[str | Any, Any] = {}
 
 
 def get_probe_string(func_node):

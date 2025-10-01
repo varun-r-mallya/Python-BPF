@@ -1,7 +1,11 @@
+from collections.abc import Callable
+from typing import Any
+
+
 class MapProcessorRegistry:
     """Registry for map processor functions"""
 
-    _processors = {}
+    _processors: dict[str, Callable[..., Any]] = {}
 
     @classmethod
     def register(cls, map_type_name):
