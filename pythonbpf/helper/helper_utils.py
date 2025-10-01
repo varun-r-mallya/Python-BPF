@@ -85,9 +85,9 @@ def _handle_fstring_print(joined_str, module, builder, func,
         if isinstance(value, ast.Constant):
             _process_constant_in_fstring(value, fmt_parts, exprs)
         elif isinstance(value, ast.FormattedValue):
-            _process_formatted_value(value, fmt_parts, exprs,
-                                     local_sym_tab, struct_sym_tab,
-                                     local_var_metadata)
+            _process_fval(value, fmt_parts, exprs,
+                          local_sym_tab, struct_sym_tab,
+                          local_var_metadata)
 
 
 def _process_constant_in_fstring(cst, fmt_parts, exprs):
@@ -102,16 +102,77 @@ def _process_constant_in_fstring(cst, fmt_parts, exprs):
             f"Unsupported constant type in f-string: {type(cst.value)}")
 
 
-def _process_formatted_value(fval, fmt_parts, exprs,
-                             local_sym_tab, struct_sym_tab,
-                             local_var_metadata):
+def _process_fval(fval, fmt_parts, exprs,
+                  local_sym_tab, struct_sym_tab,
+                  local_var_metadata):
     """Process formatted values in f-string."""
     logger.debug(f"Processing formatted value: {ast.dump(fval)}")
 
     if isinstance(fval.value, ast.Name):
-        pass
+        _process_name_in_fval(fval.value, fmt_parts, exprs, local_sym_tab)
     elif isinstance(fval.value, ast.Attribute):
-        pass
+        _process_attr_in_fval(fval.value, fmt_parts, exprs,
+                              local_sym_tab, struct_sym_tab,
+                              local_var_metadata)
     else:
         raise NotImplementedError(
             f"Unsupported formatted value type in f-string: {type(fval.value)}")
+
+
+def _process_name_in_fval(name_node, fmt_parts, exprs, local_sym_tab):
+    """Process name nodes in formatted values."""
+    if local_sym_tab and name_node.id in local_sym_tab:
+        _, var_type = local_sym_tab[name_node.id]
+        _populate_fval(var_type, name_node, fmt_parts, exprs)
+
+
+def _process_attr_in_fval(attr_node, fmt_parts, exprs,
+                          local_sym_tab, struct_sym_tab,
+                          local_var_metadata):
+    """Process attribute nodes in formatted values."""
+    if (isinstance(attr_node.value, ast.Name) and
+            local_sym_tab and attr_node.value.id in local_sym_tab):
+        var_name = attr_node.value.id
+        field_name = attr_node.attr
+
+        if not local_var_metadata or var_name not in local_var_metadata:
+            raise ValueError(
+                f"Variable metadata for '{var_name}' not found in local variable metadata")
+
+        var_type = local_sym_tab[var_name][1]
+        if var_type not in struct_sym_tab:
+            raise ValueError(
+                f"Struct type '{var_type}' for variable '{var_name}' not found in struct symbol table")
+
+        struct_info = struct_sym_tab[var_type]
+        if field_name not in struct_info.fields:
+            raise ValueError(
+                f"Field '{field_name}' not found in struct '{var_type}'")
+
+        field_type = struct_info.field_type(field_name)
+        _populate_fval(field_type, attr_node, fmt_parts, exprs)
+    else:
+        raise NotImplementedError(
+            "Only simple attribute access on local variables is supported in f-strings.")
+
+
+def _populate_fval(ftype, node, fmt_parts, exprs):
+    """Populate format parts and expressions based on field type."""
+    if isinstance(ftype, ir.IntType):
+        # TODO: We print as signed integers only for now
+        if ftype.width == 64:
+            fmt_parts.append("%lld")
+            exprs.append(node)
+        elif ftype.width == 32:
+            fmt_parts.append("%d")
+            exprs.append(node)
+        else:
+            raise NotImplementedError(
+                f"Unsupported integer width in f-string: {ftype.width}")
+    elif ftype == ir.PointerType(ir.IntType(8)):
+        # NOTE: We assume i8* is a string
+        fmt_parts.append("%s")
+        exprs.append(node)
+    else:
+        raise NotImplementedError(
+            f"Unsupported field type in f-string: {ftype}")
