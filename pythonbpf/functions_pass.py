@@ -674,7 +674,7 @@ def infer_return_type(func_node: ast.FunctionDef):
             if found_type is None:
                 found_type = t
             elif found_type != t:
-                raise ValueError(f"Conflicting return types:{found_type} vs {t}")
+                raise ValueError(f"Conflicting return types: {found_type} vs {t}")
     return found_type or "None"
 
 
