@@ -231,50 +231,37 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func,
 def handle_helper_call(call, module, builder, func,
                        local_sym_tab=None, map_sym_tab=None,
                        struct_sym_tab=None, local_var_metadata=None):
-    print(local_var_metadata)
+    """Process a BPF helper function call and emit the appropriate LLVM IR."""
+    # Helper function to get map pointer and invoke handler
+    def invoke_helper(method_name, map_ptr=None):
+        handler = HelperHandlerRegistry.get_handler(method_name)
+        if not handler:
+            raise NotImplementedError(
+                f"Helper function '{method_name}' is not implemented.")
+        return handler(call, map_ptr, module, builder, func,
+                       local_sym_tab, struct_sym_tab, local_var_metadata)
+
+    # Handle direct function calls (e.g., print(), ktime())
     if isinstance(call.func, ast.Name):
-        func_name = call.func.id
-        hdl_func = HelperHandlerRegistry.get_handler(func_name)
-        if hdl_func:
-            # it is not a map method call
-            return hdl_func(call, None, module, builder, func, local_sym_tab, struct_sym_tab, local_var_metadata)
-        else:
-            raise NotImplementedError(
-                f"Function {func_name} is not implemented as a helper function.")
+        return invoke_helper(call.func.id)
+
+    # Handle method calls (e.g., map.lookup(), map.update())
     elif isinstance(call.func, ast.Attribute):
-        # likely a map method call
-        if isinstance(call.func.value, ast.Call) and isinstance(call.func.value.func, ast.Name):
-            map_name = call.func.value.func.id
-            method_name = call.func.attr
-            if map_sym_tab and map_name in map_sym_tab:
-                map_ptr = map_sym_tab[map_name]
-                hdl_func = HelperHandlerRegistry.get_handler(method_name)
-                if hdl_func:
-                    print(local_var_metadata)
-                    return hdl_func(
-                        call, map_ptr, module, builder, func, local_sym_tab, struct_sym_tab, local_var_metadata)
-                else:
-                    raise NotImplementedError(
-                        f"Map method {method_name} is not implemented as a helper function.")
-            else:
-                raise ValueError(
-                    f"Map variable {map_name} not found in symbol tables.")
-        elif isinstance(call.func.value, ast.Name):
-            obj_name = call.func.value.id
-            method_name = call.func.attr
-            if map_sym_tab and obj_name in map_sym_tab:
-                map_ptr = map_sym_tab[obj_name]
-                hdl_func = HelperHandlerRegistry.get_handler(method_name)
-                if hdl_func:
-                    return hdl_func(
-                        call, map_ptr, module, builder, func, local_sym_tab, struct_sym_tab, local_var_metadata)
-                else:
-                    raise NotImplementedError(
-                        f"Map method {method_name} is not implemented as a helper function.")
-            else:
-                raise ValueError(
-                    f"Map variable {obj_name} not found in symbol tables.")
+        method_name = call.func.attr
+        value = call.func.value
+
+        # Get map pointer from different styles of map access
+        if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
+            # Variable style: my_map.lookup(key)
+            map_name = value.func.id
         else:
             raise NotImplementedError(
-                "Attribute not supported for map method calls.")
+                f"Unsupported map access pattern: {ast.dump(value)}")
+
+        # Verify map exists and get pointer
+        if not map_sym_tab or map_name not in map_sym_tab:
+            raise ValueError(f"Map '{map_name}' not found in symbol table")
+
+        return invoke_helper(method_name, map_sym_tab[map_name])
+
     return None
