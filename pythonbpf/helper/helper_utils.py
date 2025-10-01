@@ -168,7 +168,7 @@ def _process_attr_in_fval(attr_node, fmt_parts, exprs,
             raise ValueError(
                 f"Variable metadata for '{var_name}' not found in local variable metadata")
 
-        var_type = local_sym_tab[var_name][1]
+        var_type = local_var_metadata[var_name]
         if var_type not in struct_sym_tab:
             raise ValueError(
                 f"Struct type '{var_type}' for variable '{var_name}' not found in struct symbol table")
@@ -251,12 +251,30 @@ def _prepare_expr_args(expr, func, module, builder,
         return ir.Constant(ir.IntType(64), 0)
 
 
-def _call_bpf_printk_helper(args, builder):
-    """Call the BPF_PRINTK helper function with the provided arguments."""
-    fn_type = ir.FunctionType(
-        ir.IntType(64), [ir.PointerType(), ir.IntType(32)], var_arg=True)
-    fn_ptr_type = ir.PointerType(fn_type)
-    fn_addr = ir.Constant(ir.IntType(64), BPFHelperID.BPF_PRINTK.value)
-    fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
+def _get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab,
+                           local_var_metadata):
+    """Extract data pointer and size information for perf event output."""
+    if isinstance(data_arg, ast.Name):
+        data_name = data_arg.id
+        if local_sym_tab and data_name in local_sym_tab:
+            data_ptr = local_sym_tab[data_name][0]
+        else:
+            raise ValueError(
+                f"Data variable {data_name} not found in local symbol table.")
 
-    return builder.call(fn_ptr, args, tail=True)
+        # Check if data_name is a struct
+        if local_var_metadata and data_name in local_var_metadata:
+            data_type = local_var_metadata[data_name]
+            if data_type in struct_sym_tab:
+                struct_info = struct_sym_tab[data_type]
+                size_val = ir.Constant(ir.IntType(64), struct_info.size)
+                return data_ptr, size_val
+            else:
+                raise ValueError(
+                    f"Struct type {data_type} for variable {data_name} not found in struct symbol table.")
+        else:
+            raise ValueError(
+                f"Metadata for variable {data_name} not found in local variable metadata.")
+    else:
+        raise NotImplementedError(
+            "Only simple object names are supported as data in perf event output.")

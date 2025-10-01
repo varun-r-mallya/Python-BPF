@@ -2,7 +2,7 @@ import ast
 from llvmlite import ir
 from pythonbpf.expr_pass import eval_expr
 from enum import Enum
-from .helper_utils import HelperHandlerRegistry, get_or_create_ptr_from_arg, get_flags_val, _handle_fstring_print, _simple_string_print
+from .helper_utils import HelperHandlerRegistry, get_or_create_ptr_from_arg, get_flags_val, _handle_fstring_print, _simple_string_print, _get_data_ptr_and_size
 
 
 class BPFHelperID(Enum):
@@ -201,50 +201,31 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func,
     data_arg = call.args[0]
     ctx_ptr = func.args[0]  # First argument to the function is ctx
 
-    if isinstance(data_arg, ast.Name):
-        data_name = data_arg.id
-        if local_sym_tab and data_name in local_sym_tab:
-            data_ptr = local_sym_tab[data_name][0]
-        else:
-            raise ValueError(
-                f"Data variable {data_name} not found in local symbol table.")
-        # Check is data_name is a struct
-        if local_var_metadata and data_name in local_var_metadata:
-            data_type = local_var_metadata[data_name]
-            if data_type in struct_sym_tab:
-                struct_info = struct_sym_tab[data_type]
-                size_val = ir.Constant(ir.IntType(64), struct_info.size)
-            else:
-                raise ValueError(
-                    f"Struct type {data_type} for variable {data_name} not found in struct symbol table.")
-        else:
-            raise ValueError(
-                f"Metadata for variable {data_name} not found in local variable metadata.")
+    data_ptr, size_val = _get_data_ptr_and_size(data_arg, local_sym_tab,
+                                                struct_sym_tab,
+                                                local_var_metadata)
 
-        # BPF_F_CURRENT_CPU is -1 in 32 bit
-        flags_val = ir.Constant(ir.IntType(64), 0xFFFFFFFF)
+    # BPF_F_CURRENT_CPU is -1 in 32 bit
+    flags_val = ir.Constant(ir.IntType(64), 0xFFFFFFFF)
 
-        map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
-        data_void_ptr = builder.bitcast(data_ptr, ir.PointerType())
-        fn_type = ir.FunctionType(
-            ir.IntType(64),
-            [ir.PointerType(ir.IntType(8)), ir.PointerType(), ir.IntType(64),
-             ir.PointerType(), ir.IntType(64)],
-            var_arg=False
-        )
-        fn_ptr_type = ir.PointerType(fn_type)
+    map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
+    data_void_ptr = builder.bitcast(data_ptr, ir.PointerType())
+    fn_type = ir.FunctionType(
+        ir.IntType(64),
+        [ir.PointerType(ir.IntType(8)), ir.PointerType(), ir.IntType(64),
+         ir.PointerType(), ir.IntType(64)],
+        var_arg=False
+    )
+    fn_ptr_type = ir.PointerType(fn_type)
 
-        # helper id
-        fn_addr = ir.Constant(ir.IntType(
-            64), BPFHelperID.BPF_PERF_EVENT_OUTPUT.value)
-        fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
+    # helper id
+    fn_addr = ir.Constant(ir.IntType(64),
+                          BPFHelperID.BPF_PERF_EVENT_OUTPUT.value)
+    fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
 
-        result = builder.call(
-            fn_ptr, [ctx_ptr, map_void_ptr, flags_val, data_void_ptr, size_val], tail=False)
-        return result, None
-    else:
-        raise NotImplementedError(
-            "Only simple object names are supported as data in perf event output.")
+    result = builder.call(
+        fn_ptr, [ctx_ptr, map_void_ptr, flags_val, data_void_ptr, size_val], tail=False)
+    return result, None
 
 
 def handle_helper_call(call, module, builder, func,
