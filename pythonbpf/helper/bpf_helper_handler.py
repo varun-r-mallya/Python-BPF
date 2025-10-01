@@ -195,6 +195,7 @@ def bpf_get_current_pid_tgid_emitter(call, map_ptr, module, builder, func,
     return pid, ir.IntType(64)
 
 
+@HelperHandlerRegistry.register("output")
 def bpf_perf_event_output_handler(call, map_ptr, module, builder, func,
                                   local_sym_tab=None, struct_sym_tab=None,
                                   local_var_metadata=None):
