@@ -469,8 +469,8 @@ def allocate_mem(
                         var = builder.alloca(ir_type, name=var_name)
                         local_var_metadata[var_name] = call_type
                         print(
-                            f"Pre-allocated variable {
-                                var_name} for struct {call_type}"
+                            f"Pre-allocated variable {var_name} "
+                            f"for struct {call_type}"
                         )
                 elif isinstance(rval.func, ast.Attribute):
                     ir_type = ir.PointerType(ir.IntType(64))
@@ -671,8 +671,8 @@ def infer_return_type(func_node: ast.FunctionDef):
             if found_type is None:
                 found_type = t
             elif found_type != t:
-                raise ValueError("Conflicting return types:" f"{
-                                 found_type} vs {t}")
+                raise ValueError("Conflicting return types:"
+                                 f"{found_type} vs {t}")
     return found_type or "None"
 
 
