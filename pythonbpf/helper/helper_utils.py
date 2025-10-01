@@ -37,14 +37,14 @@ def create_int_constant_ptr(value, builder, int_width=64):
     return ptr
 
 
-def get_key_ptr(key_arg, builder, local_sym_tab):
+def get_or_create_ptr_from_arg(arg, builder, local_sym_tab):
     """Extract key pointer from the call arguments."""
 
-    if isinstance(key_arg, ast.Name):
-        key_ptr = get_var_ptr_from_name(key_arg.id, local_sym_tab)
-    elif isinstance(key_arg, ast.Constant) and isinstance(key_arg.value, int):
-        key_ptr = create_int_constant_ptr(key_arg.value, builder)
+    if isinstance(arg, ast.Name):
+        ptr = get_var_ptr_from_name(arg.id, local_sym_tab)
+    elif isinstance(arg, ast.Constant) and isinstance(arg.value, int):
+        ptr = create_int_constant_ptr(arg.value, builder)
     else:
         raise NotImplementedError(
             "Only simple variable names are supported as keys in map lookup.")
-    return key_ptr
+    return ptr
