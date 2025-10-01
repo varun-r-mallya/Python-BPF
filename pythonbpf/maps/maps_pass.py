@@ -91,7 +91,7 @@ def create_map_debug_info(module, map_global, map_name, map_params):
     uint_type = generator.get_uint32_type()
     ulong_type = generator.get_uint64_type()
     array_type = generator.create_array_type(
-        uint_type, map_params.get("type", BPFMapType.HASH).value
+        uint_type, map_params.get("type", BPFMapType.UNSPEC).value
     )
     type_ptr = generator.create_pointer_type(array_type, 64)
     key_ptr = generator.create_pointer_type(
