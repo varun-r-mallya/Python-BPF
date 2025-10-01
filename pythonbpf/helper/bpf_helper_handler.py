@@ -255,11 +255,14 @@ def handle_helper_call(call, module, builder, func,
     elif isinstance(call.func, ast.Attribute):
         method_name = call.func.attr
         value = call.func.value
-
+        print(f"Handling method call: {ast.dump(call.func)}")
         # Get map pointer from different styles of map access
         if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
-            # Variable style: my_map.lookup(key)
+            # Func style: my_map().lookup(key)
             map_name = value.func.id
+        elif isinstance(value, ast.Name):
+            # Direct style: my_map.lookup(key)
+            map_name = value.id
         else:
             raise NotImplementedError(
                 f"Unsupported map access pattern: {ast.dump(value)}")
