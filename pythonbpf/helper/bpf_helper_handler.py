@@ -1,8 +1,10 @@
 import ast
 from llvmlite import ir
-from pythonbpf.expr_pass import eval_expr
 from enum import Enum
-from .helper_utils import HelperHandlerRegistry, get_or_create_ptr_from_arg, get_flags_val, _handle_fstring_print, _simple_string_print, _get_data_ptr_and_size
+from .helper_utils import (HelperHandlerRegistry,
+                           get_or_create_ptr_from_arg, get_flags_val,
+                           handle_fstring_print, simple_string_print,
+                           get_data_ptr_and_size)
 
 
 class BPFHelperID(Enum):
@@ -74,16 +76,17 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func,
 
     args = []
     if isinstance(call.args[0], ast.JoinedStr):
-        args = _handle_fstring_print(call.args[0], module, builder, func,
-                                     local_sym_tab, struct_sym_tab,
-                                     local_var_metadata)
-    elif isinstance(call.args[0], ast.Constant) and isinstance(call.args[0].value, str):
+        args = handle_fstring_print(call.args[0], module, builder, func,
+                                    local_sym_tab, struct_sym_tab,
+                                    local_var_metadata)
+    elif (isinstance(call.args[0], ast.Constant) and
+          isinstance(call.args[0].value, str)):
         # TODO: We are onbly supporting single arguments for now.
         # In case of multiple args, the first one will be taken.
-        args = _simple_string_print(call.args[0].value, module, builder, func)
+        args = simple_string_print(call.args[0].value, module, builder, func)
     else:
         raise NotImplementedError(
-            "Only simple string literals or f-strings are supported in bpf_printk.")
+            "Only simple strings or f-strings are supported in bpf_printk.")
 
     fn_type = ir.FunctionType(
         ir.IntType(64), [ir.PointerType(), ir.IntType(32)], var_arg=True)
@@ -106,8 +109,8 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func,
     if (not call.args or
         len(call.args) < 2 or
             len(call.args) > 3):
-        raise ValueError("Map update expects 2 or 3 arguments (key, value, flags), got "
-                         f"{len(call.args)}")
+        raise ValueError("Map update expects 2 or 3 args (key, value, flags), "
+                         f"got {len(call.args)}")
 
     key_arg = call.args[0]
     value_arg = call.args[1]
@@ -196,14 +199,14 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func,
                                   local_sym_tab=None, struct_sym_tab=None,
                                   local_var_metadata=None):
     if len(call.args) != 1:
-        raise ValueError("Perf event output expects exactly one argument (data), got "
-                         f"{len(call.args)}")
+        raise ValueError("Perf event output expects exactly one argument, "
+                         f"got {len(call.args)}")
     data_arg = call.args[0]
     ctx_ptr = func.args[0]  # First argument to the function is ctx
 
-    data_ptr, size_val = _get_data_ptr_and_size(data_arg, local_sym_tab,
-                                                struct_sym_tab,
-                                                local_var_metadata)
+    data_ptr, size_val = get_data_ptr_and_size(data_arg, local_sym_tab,
+                                               struct_sym_tab,
+                                               local_var_metadata)
 
     # BPF_F_CURRENT_CPU is -1 in 32 bit
     flags_val = ir.Constant(ir.IntType(64), 0xFFFFFFFF)
@@ -224,7 +227,9 @@ def bpf_perf_event_output_handler(call, map_ptr, module, builder, func,
     fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
 
     result = builder.call(
-        fn_ptr, [ctx_ptr, map_void_ptr, flags_val, data_void_ptr, size_val], tail=False)
+        fn_ptr,
+        [ctx_ptr, map_void_ptr, flags_val, data_void_ptr, size_val],
+        tail=False)
     return result, None
 
 
