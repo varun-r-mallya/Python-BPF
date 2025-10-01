@@ -1,5 +1,7 @@
 import ast
 import logging
+from collections.abc import Callable
+
 from llvmlite import ir
 from pythonbpf.expr_pass import eval_expr
 
@@ -9,7 +11,7 @@ logger = logging.getLogger(__name__)
 class HelperHandlerRegistry:
     """Registry for BPF helpers"""
 
-    _handlers = {}
+    _handlers: dict[str, Callable] = {}
 
     @classmethod
     def register(cls, helper_name):
