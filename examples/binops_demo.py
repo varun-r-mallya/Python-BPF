@@ -1,5 +1,5 @@
 from pythonbpf import bpf, map, section, bpfglobal, compile
-from pythonbpf.helpers import ktime
+from pythonbpf.helper import ktime
 from pythonbpf.maps import HashMap
 
 from ctypes import c_void_p, c_int64, c_uint64

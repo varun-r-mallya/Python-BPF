@@ -60,11 +60,12 @@ pip install pythonbpf pylibbpf
 ```python
 import time
 from pythonbpf import bpf, map, section, bpfglobal, BPF
-from pythonbpf.helpers import pid
+from pythonbpf.helper import pid
 from pythonbpf.maps import HashMap
 from pylibbpf import *
 from ctypes import c_void_p, c_int64, c_uint64, c_int32
 import matplotlib.pyplot as plt
+
 
 # This program attaches an eBPF tracepoint to sys_enter_clone,
 # counts per-PID clone syscalls, stores them in a hash map,
@@ -75,6 +76,7 @@ import matplotlib.pyplot as plt
 @map
 def hist() -> HashMap:
     return HashMap(key=c_int32, value=c_uint64, max_entries=4096)
+
 
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")

@@ -1,7 +1,7 @@
 import time
 
 from pythonbpf import bpf, map, section, bpfglobal, BPF
-from pythonbpf.helpers import pid
+from pythonbpf.helper import pid
 from pythonbpf.maps import HashMap
 from pylibbpf import BpfMap
 from ctypes import c_void_p, c_int64, c_uint64, c_int32

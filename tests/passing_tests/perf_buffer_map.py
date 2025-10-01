@@ -1,5 +1,5 @@
 from pythonbpf import bpf, map, struct, section, bpfglobal, compile, compile_to_ir, BPF
-from pythonbpf.helpers import ktime, pid
+from pythonbpf.helper import ktime, pid
 from pythonbpf.maps import PerfEventArray
 
 from ctypes import c_void_p, c_int32, c_uint64
