@@ -189,7 +189,7 @@ def handle_assign(
                 map_name = rval.func.value.func.id
                 method_name = rval.func.attr
                 if map_name in map_sym_tab:
-                    map_ptr = map_sym_tab[map_name]
+                    # map_ptr = map_sym_tab[map_name]
                     if method_name in helper_func_list:
                         val = handle_helper_call(
                             rval,
@@ -289,7 +289,7 @@ def handle_if(
 ):
     """Handle if statements in the function body."""
     print("Handling if statement")
-    start = builder.block.parent
+    # start = builder.block.parent
     then_block = func.append_basic_block(name="if.then")
     merge_block = func.append_basic_block(name="if.end")
     if stmt.orelse:
@@ -674,7 +674,7 @@ def assign_string_to_array(builder, target_array_ptr, source_string_ptr, array_l
     Copy a string (i8*) to a fixed-size array ([N x i8]*)
     """
     # Create a loop to copy characters one by one
-    entry_block = builder.block
+    # entry_block = builder.block
     copy_block = builder.append_basic_block("copy_char")
     end_block = builder.append_basic_block("copy_end")
 
