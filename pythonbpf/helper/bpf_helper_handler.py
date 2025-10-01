@@ -2,7 +2,7 @@ import ast
 from llvmlite import ir
 from pythonbpf.expr_pass import eval_expr
 from enum import Enum
-from .helper_utils import HelperHandlerRegistry
+from .helper_utils import HelperHandlerRegistry, get_key_ptr
 
 
 class BPFHelperID(Enum):
@@ -38,31 +38,7 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func,
     """
     Emit LLVM IR for bpf_map_lookup_elem helper function call.
     """
-    if call.args and len(call.args) != 1:
-        raise ValueError("Map lookup expects exactly one argument, got "
-                         f"{len(call.args)}")
-    key_arg = call.args[0]
-    if isinstance(key_arg, ast.Name):
-        key_name = key_arg.id
-        if local_sym_tab and key_name in local_sym_tab:
-            key_ptr = local_sym_tab[key_name][0]
-        else:
-            raise ValueError(
-                f"Key variable {key_name} not found in local symbol table.")
-    elif isinstance(key_arg, ast.Constant) and isinstance(key_arg.value, int):
-        # handle constant integer keys
-        key_val = key_arg.value
-        key_type = ir.IntType(64)
-        key_ptr = builder.alloca(key_type)
-        key_ptr.align = key_type // 8
-        builder.store(ir.Constant(key_type, key_val), key_ptr)
-    else:
-        raise NotImplementedError(
-            "Only simple variable names are supported as keys in map lookup.")
-
-    if key_ptr is None:
-        raise ValueError("Key pointer is None.")
-
+    key_ptr = get_key_ptr(call, builder, local_sym_tab)
     map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
 
     fn_type = ir.FunctionType(
@@ -72,7 +48,6 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func,
     )
     fn_ptr_type = ir.PointerType(fn_type)
 
-    # Helper ID 1 is bpf_map_lookup_elem
     fn_addr = ir.Constant(ir.IntType(
         64), BPFHelperID.BPF_MAP_LOOKUP_ELEM.value)
     fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
