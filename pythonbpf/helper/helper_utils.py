@@ -37,7 +37,7 @@ class HelperHandlerRegistry:
 def get_var_ptr_from_name(var_name, local_sym_tab):
     """Get a pointer to a variable from the symbol table."""
     if local_sym_tab and var_name in local_sym_tab:
-        return local_sym_tab[var_name][0]
+        return local_sym_tab[var_name].var
     raise ValueError(f"Variable '{var_name}' not found in local symbol table")
 
 
@@ -72,7 +72,7 @@ def get_flags_val(arg, builder, local_sym_tab):
 
     if isinstance(arg, ast.Name):
         if local_sym_tab and arg.id in local_sym_tab:
-            flags_ptr = local_sym_tab[arg.id][0]
+            flags_ptr = local_sym_tab[arg.id].var
             return builder.load(flags_ptr)
         else:
             raise ValueError(f"Variable '{arg.id}' not found in local symbol table")
@@ -178,7 +178,7 @@ def _process_fval(fval, fmt_parts, exprs, local_sym_tab, struct_sym_tab):
 def _process_name_in_fval(name_node, fmt_parts, exprs, local_sym_tab):
     """Process name nodes in formatted values."""
     if local_sym_tab and name_node.id in local_sym_tab:
-        _, var_type = local_sym_tab[name_node.id]
+        _, var_type, tmp = local_sym_tab[name_node.id]
         _populate_fval(var_type, name_node, fmt_parts, exprs)
 
 
@@ -287,7 +287,7 @@ def get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab):
     if isinstance(data_arg, ast.Name):
         data_name = data_arg.id
         if local_sym_tab and data_name in local_sym_tab:
-            data_ptr = local_sym_tab[data_name][0]
+            data_ptr = local_sym_tab[data_name].var
         else:
             raise ValueError(
                 f"Data variable {data_name} not found in local symbol table."
