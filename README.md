@@ -1,4 +1,14 @@
-<img src="https://github.com/user-attachments/assets/b175bf39-23cb-475d-a6e1-7b5c99a1ed72" alt="pythonbpf" width="450">
+<picture>
+  <source
+    media="(prefers-color-scheme: light)"
+    srcset="https://github.com/user-attachments/assets/f3738131-d7cb-4b5c-8699-c7010295a159"
+    width="450"
+    alt="Light‐mode image">
+  <img
+    src="https://github.com/user-attachments/assets/b175bf39-23cb-475d-a6e1-7b5c99a1ed72"
+    width="450"
+    alt="Dark‐mode image">
+</picture>
 <!-- Badges -->
 <p align="center">
   <!-- PyPI -->
