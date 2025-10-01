@@ -38,7 +38,10 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func,
     """
     Emit LLVM IR for bpf_map_lookup_elem helper function call.
     """
-    key_ptr = get_key_ptr(call, builder, local_sym_tab)
+    if not call.args or len(call.args) != 1:
+        raise ValueError("Map lookup expects exactly one argument (key), got "
+                         f"{len(call.args)}")
+    key_ptr = get_key_ptr(call.args[0], builder, local_sym_tab)
     map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
 
     fn_type = ir.FunctionType(
@@ -239,25 +242,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func,
     value_arg = call.args[1]
     flags_arg = call.args[2] if len(call.args) > 2 else None
 
-    # Handle key
-    if isinstance(key_arg, ast.Name):
-        key_name = key_arg.id
-        if local_sym_tab and key_name in local_sym_tab:
-            key_ptr = local_sym_tab[key_name][0]
-        else:
-            raise ValueError(
-                f"Key variable {key_name} not found in local symbol table.")
-    elif isinstance(key_arg, ast.Constant) and isinstance(key_arg.value, int):
-        # Handle constant integer keys
-        key_val = key_arg.value
-        key_type = ir.IntType(64)
-        key_ptr = builder.alloca(key_type)
-        key_ptr.align = key_type.width // 8
-        builder.store(ir.Constant(key_type, key_val), key_ptr)
-    else:
-        raise NotImplementedError(
-            "Only simple variable names and integer constants are supported as keys in map update.")
-
+    key_ptr = get_key_ptr(key_arg, builder, local_sym_tab)
     # Handle value
     if isinstance(value_arg, ast.Name):
         value_name = value_arg.id
@@ -331,7 +316,10 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func,
     Emit LLVM IR for bpf_map_delete_elem helper function call.
     Expected call signature: map.delete(key)
     """
-    key_ptr = get_key_ptr(call, builder, local_sym_tab)
+    if not call.args or len(call.args) != 1:
+        raise ValueError("Map delete expects exactly one argument (key), got "
+                         f"{len(call.args)}")
+    key_ptr = get_key_ptr(call.args[0], builder, local_sym_tab)
     map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
 
     # Define function type for bpf_map_delete_elem
