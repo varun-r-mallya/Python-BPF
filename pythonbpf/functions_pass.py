@@ -608,7 +608,7 @@ def func_proc(tree, module, chunks, map_sym_tab, structs_sym_tab):
         )
 
 
-def infer_return_type(func_node: ast.FunctionDef):
+def infer_return_type(func_node: ast.FunctionDef) -> str | None | Any:
     if not isinstance(func_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         raise TypeError("Expected ast.FunctionDef")
     if func_node.returns is not None:
@@ -656,9 +656,9 @@ def infer_return_type(func_node: ast.FunctionDef):
         except Exception:
             return type(e).__name__
 
-    for node in ast.walk(func_node):
-        if isinstance(node, ast.Return):
-            t = _expr_type(node.value)
+    for walked_node in ast.walk(func_node):
+        if isinstance(walked_node, ast.Return):
+            t = _expr_type(walked_node.value)
             if found_type is None:
                 found_type = t
             elif found_type != t:
