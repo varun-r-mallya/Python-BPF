@@ -32,7 +32,7 @@ def eval_expr(
             return None
     elif isinstance(expr, ast.Call):
         # delayed import to avoid circular dependency
-        from .bpf_helper_handler import helper_func_list, handle_helper_call
+        from pythonbpf.helper import HelperHandlerRegistry, handle_helper_call
 
         if isinstance(expr.func, ast.Name):
             # check deref
@@ -63,7 +63,7 @@ def eval_expr(
                 return val, local_sym_tab[expr.args[0].id][1]
 
             # check for helpers
-            if expr.func.id in helper_func_list:
+            if HelperHandlerRegistry.has_handler(expr.func.id):
                 return handle_helper_call(
                     expr,
                     module,
@@ -80,7 +80,7 @@ def eval_expr(
                 expr.func.value.func, ast.Name
             ):
                 method_name = expr.func.attr
-                if method_name in helper_func_list:
+                if HelperHandlerRegistry.has_handler(method_name):
                     return handle_helper_call(
                         expr,
                         module,
@@ -95,7 +95,7 @@ def eval_expr(
                 obj_name = expr.func.value.id
                 method_name = expr.func.attr
                 if obj_name in map_sym_tab:
-                    if method_name in helper_func_list:
+                    if HelperHandlerRegistry.has_handler(method_name):
                         return handle_helper_call(
                             expr,
                             module,

@@ -2,7 +2,7 @@ from llvmlite import ir
 import ast
 
 
-from .bpf_helper_handler import helper_func_list, handle_helper_call
+from .helper import HelperHandlerRegistry, handle_helper_call
 from .type_deducer import ctypes_to_ir
 from .binary_ops import handle_binary_op
 from .expr_pass import eval_expr, handle_expr
@@ -83,16 +83,19 @@ def handle_assign(
     elif isinstance(rval, ast.Constant):
         if isinstance(rval.value, bool):
             if rval.value:
-                builder.store(ir.Constant(ir.IntType(1), 1), local_sym_tab[var_name][0])
+                builder.store(ir.Constant(ir.IntType(1), 1),
+                              local_sym_tab[var_name][0])
             else:
-                builder.store(ir.Constant(ir.IntType(1), 0), local_sym_tab[var_name][0])
+                builder.store(ir.Constant(ir.IntType(1), 0),
+                              local_sym_tab[var_name][0])
             print(f"Assigned constant {rval.value} to {var_name}")
         elif isinstance(rval.value, int):
             # Assume c_int64 for now
             # var = builder.alloca(ir.IntType(64), name=var_name)
             # var.align = 8
             builder.store(
-                ir.Constant(ir.IntType(64), rval.value), local_sym_tab[var_name][0]
+                ir.Constant(ir.IntType(64),
+                            rval.value), local_sym_tab[var_name][0]
             )
             # local_sym_tab[var_name] = var
             print(f"Assigned constant {rval.value} to {var_name}")
@@ -107,7 +110,8 @@ def handle_assign(
             global_str.linkage = "internal"
             global_str.global_constant = True
             global_str.initializer = str_const
-            str_ptr = builder.bitcast(global_str, ir.PointerType(ir.IntType(8)))
+            str_ptr = builder.bitcast(
+                global_str, ir.PointerType(ir.IntType(8)))
             builder.store(str_ptr, local_sym_tab[var_name][0])
             print(f"Assigned string constant '{rval.value}' to {var_name}")
         else:
@@ -126,14 +130,15 @@ def handle_assign(
                 # var = builder.alloca(ir_type, name=var_name)
                 # var.align = ir_type.width // 8
                 builder.store(
-                    ir.Constant(ir_type, rval.args[0].value), local_sym_tab[var_name][0]
+                    ir.Constant(
+                        ir_type, rval.args[0].value), local_sym_tab[var_name][0]
                 )
                 print(
                     f"Assigned {call_type} constant "
                     f"{rval.args[0].value} to {var_name}"
                 )
                 # local_sym_tab[var_name] = var
-            elif call_type in helper_func_list:
+            elif HelperHandlerRegistry.has_handler(call_type):
                 # var = builder.alloca(ir.IntType(64), name=var_name)
                 # var.align = 8
                 val = handle_helper_call(
@@ -172,7 +177,8 @@ def handle_assign(
                 ir_type = struct_info.ir_type
                 # var = builder.alloca(ir_type, name=var_name)
                 # Null init
-                builder.store(ir.Constant(ir_type, None), local_sym_tab[var_name][0])
+                builder.store(ir.Constant(ir_type, None),
+                              local_sym_tab[var_name][0])
                 local_var_metadata[var_name] = call_type
                 print(f"Assigned struct {call_type} to {var_name}")
                 # local_sym_tab[var_name] = var
@@ -189,8 +195,7 @@ def handle_assign(
                 map_name = rval.func.value.func.id
                 method_name = rval.func.attr
                 if map_name in map_sym_tab:
-                    # map_ptr = map_sym_tab[map_name]
-                    if method_name in helper_func_list:
+                    if HelperHandlerRegistry.has_handler(method_name):
                         val = handle_helper_call(
                             rval,
                             module,
@@ -244,7 +249,8 @@ def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
             print(f"Undefined variable {cond.id} in condition")
             return None
     elif isinstance(cond, ast.Compare):
-        lhs = eval_expr(func, module, builder, cond.left, local_sym_tab, map_sym_tab)[0]
+        lhs = eval_expr(func, module, builder, cond.left,
+                        local_sym_tab, map_sym_tab)[0]
         if len(cond.ops) != 1 or len(cond.comparators) != 1:
             print("Unsupported complex comparison")
             return None
@@ -297,7 +303,8 @@ def handle_if(
     else:
         else_block = None
 
-    cond = handle_cond(func, module, builder, stmt.test, local_sym_tab, map_sym_tab)
+    cond = handle_cond(func, module, builder, stmt.test,
+                       local_sym_tab, map_sym_tab)
     if else_block:
         builder.cbranch(cond, then_block, else_block)
     else:
@@ -442,8 +449,9 @@ def allocate_mem(
                         ir_type = ctypes_to_ir(call_type)
                         var = builder.alloca(ir_type, name=var_name)
                         var.align = ir_type.width // 8
-                        print(f"Pre-allocated variable {var_name} of type {call_type}")
-                    elif call_type in helper_func_list:
+                        print(
+                            f"Pre-allocated variable {var_name} of type {call_type}")
+                    elif HelperHandlerRegistry.has_handler(call_type):
                         # Assume return type is int64 for now
                         ir_type = ir.IntType(64)
                         var = builder.alloca(ir_type, name=var_name)
@@ -461,7 +469,8 @@ def allocate_mem(
                         var = builder.alloca(ir_type, name=var_name)
                         local_var_metadata[var_name] = call_type
                         print(
-                            f"Pre-allocated variable {var_name} for struct {call_type}"
+                            f"Pre-allocated variable {
+                                var_name} for struct {call_type}"
                         )
                 elif isinstance(rval.func, ast.Attribute):
                     ir_type = ir.PointerType(ir.IntType(64))
@@ -662,7 +671,8 @@ def infer_return_type(func_node: ast.FunctionDef):
             if found_type is None:
                 found_type = t
             elif found_type != t:
-                raise ValueError("Conflicting return types:" f"{found_type} vs {t}")
+                raise ValueError("Conflicting return types:" f"{
+                                 found_type} vs {t}")
     return found_type or "None"
 
 
@@ -699,7 +709,8 @@ def assign_string_to_array(builder, target_array_ptr, source_string_ptr, array_l
         char = builder.load(src_ptr)
 
         # Store character in target
-        dst_ptr = builder.gep(target_array_ptr, [ir.Constant(ir.IntType(32), 0), idx])
+        dst_ptr = builder.gep(
+            target_array_ptr, [ir.Constant(ir.IntType(32), 0), idx])
         builder.store(char, dst_ptr)
 
         # Increment counter
@@ -710,5 +721,6 @@ def assign_string_to_array(builder, target_array_ptr, source_string_ptr, array_l
 
     # Ensure null termination
     last_idx = ir.Constant(ir.IntType(32), array_length - 1)
-    null_ptr = builder.gep(target_array_ptr, [ir.Constant(ir.IntType(32), 0), last_idx])
+    null_ptr = builder.gep(
+        target_array_ptr, [ir.Constant(ir.IntType(32), 0), last_idx])
     builder.store(ir.Constant(ir.IntType(8), 0), null_ptr)
