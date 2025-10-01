@@ -85,7 +85,7 @@ def create_bpf_map(module, map_name, map_params):
 
 
 def create_map_debug_info(module, map_global, map_name, map_params):
-    """Generate debug information metadata for BPF maps HASH and PERF_EVENT_ARRAY"""
+    """Generate debug info metadata for BPF maps HASH and PERF_EVENT_ARRAY"""
     generator = DebugInfoGenerator(module)
 
     uint_type = generator.get_uint32_type()
@@ -158,7 +158,8 @@ def create_ringbuf_debug_info(module, map_global, map_name, map_params):
     type_ptr = generator.create_pointer_type(type_array, 64)
     type_member = generator.create_struct_member("type", type_ptr, 0)
 
-    max_entries_array = generator.create_array_type(int_type, map_params["max_entries"])
+    max_entries_array = generator.create_array_type(
+        int_type, map_params["max_entries"])
     max_entries_ptr = generator.create_pointer_type(max_entries_array, 64)
     max_entries_member = generator.create_struct_member(
         "max_entries", max_entries_ptr, 64
@@ -166,7 +167,8 @@ def create_ringbuf_debug_info(module, map_global, map_name, map_params):
 
     elements_arr = [type_member, max_entries_member]
 
-    struct_type = generator.create_struct_type(elements_arr, 128, is_distinct=True)
+    struct_type = generator.create_struct_type(
+        elements_arr, 128, is_distinct=True)
 
     global_var = generator.create_global_var_debug_info(
         map_name, struct_type, is_local=False
