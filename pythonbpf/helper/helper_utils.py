@@ -79,7 +79,7 @@ def get_flags_val(arg, builder, local_sym_tab):
 
 
 def simple_string_print(string_value, module, builder, func):
-    """Emit code for a simple string print statement."""
+    """Prepare arguments for bpf_printk from a simple string value"""
     fmt_str = string_value + "\n\0"
     fmt_ptr = _create_format_string_global(fmt_str, func, module, builder)
 
