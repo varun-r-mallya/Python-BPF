@@ -73,6 +73,15 @@ def get_flags_val(arg, builder, local_sym_tab):
         "Only simple variable names or integer constants are supported as flags in map helpers.")
 
 
+def _simple_string_print(string_value, module, builder, func):
+    """Emit code for a simple string print statement."""
+    fmt_str = string_value + "\n\0"
+    fmt_ptr = _create_format_string_global(fmt_str, func, module, builder)
+
+    args = [fmt_ptr, ir.Constant(ir.IntType(32), len(fmt_str))]
+    return args
+
+
 def _handle_fstring_print(joined_str, module, builder, func,
                           local_sym_tab=None, struct_sym_tab=None,
                           local_var_metadata=None):
@@ -93,10 +102,8 @@ def _handle_fstring_print(joined_str, module, builder, func,
             raise NotImplementedError(
                 f"Unsupported f-string value type: {type(value)}")
 
-    fmt_str = "".join(fmt_parts) + "\n\0"
-    fmt_ptr = _create_format_string_global(fmt_str, func, module, builder)
-
-    args = [fmt_ptr, ir.Constant(ir.IntType(32), len(fmt_str))]
+    fmt_str = "".join(fmt_parts)
+    args = _simple_string_print(fmt_str, module, builder, func)
 
     # NOTE: Process expressions (limited to 3 due to BPF constraints)
     if len(exprs) > 3:
@@ -109,8 +116,7 @@ def _handle_fstring_print(joined_str, module, builder, func,
                                        local_var_metadata)
         args.append(arg_value)
 
-    # Call the BPF_PRINTK helper
-    return _call_bpf_printk_helper(args, builder)
+    return args
 
 
 def _process_constant_in_fstring(cst, fmt_parts, exprs):
