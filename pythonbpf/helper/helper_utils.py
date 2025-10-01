@@ -1,5 +1,8 @@
 import ast
+import logging
 from llvmlite import ir
+
+logger = logging.getLogger(__name__)
 
 
 class HelperHandlerRegistry:
@@ -67,3 +70,48 @@ def get_flags_val(arg, builder, local_sym_tab):
 
     raise NotImplementedError(
         "Only simple variable names or integer constants are supported as flags in map helpers.")
+
+
+def _handle_fstring_print(joined_str, module, builder, func,
+                          local_sym_tab=None, struct_sym_tab=None,
+                          local_var_metadata=None):
+    """Handle f-string formatting for bpf_printk emitter."""
+    fmt_parts = []
+    exprs = []
+
+    for value in joined_str.values:
+        logger.debug(f"Processing f-string value: {ast.dump(value)}")
+
+        if isinstance(value, ast.Constant):
+            _process_constant_in_fstring(value, fmt_parts, exprs)
+        elif isinstance(value, ast.FormattedValue):
+            _process_formatted_value(value, fmt_parts, exprs,
+                                     local_sym_tab, struct_sym_tab,
+                                     local_var_metadata)
+
+
+def _process_constant_in_fstring(cst, fmt_parts, exprs):
+    """Process constant values in f-string."""
+    if isinstance(cst.value, str):
+        fmt_parts.append(cst.value)
+    elif isinstance(cst.value, int):
+        fmt_parts.append("%lld")
+        exprs.append(ir.Constant(ir.IntType(64), cst.value))
+    else:
+        raise NotImplementedError(
+            f"Unsupported constant type in f-string: {type(cst.value)}")
+
+
+def _process_formatted_value(fval, fmt_parts, exprs,
+                             local_sym_tab, struct_sym_tab,
+                             local_var_metadata):
+    """Process formatted values in f-string."""
+    logger.debug(f"Processing formatted value: {ast.dump(fval)}")
+
+    if isinstance(fval.value, ast.Name):
+        pass
+    elif isinstance(fval.value, ast.Attribute):
+        pass
+    else:
+        raise NotImplementedError(
+            f"Unsupported formatted value type in f-string: {type(fval.value)}")
