@@ -8,14 +8,17 @@ logger = logging.getLogger(__name__)
 
 class HelperHandlerRegistry:
     """Registry for BPF helpers"""
+
     _handlers = {}
 
     @classmethod
     def register(cls, helper_name):
         """Decorator to register a handler function for a helper"""
+
         def decorator(func):
             cls._handlers[helper_name] = func
             return func
+
         return decorator
 
     @classmethod
@@ -55,7 +58,8 @@ def get_or_create_ptr_from_arg(arg, builder, local_sym_tab):
         ptr = create_int_constant_ptr(arg.value, builder)
     else:
         raise NotImplementedError(
-            "Only simple variable names are supported as args in map helpers.")
+            "Only simple variable names are supported as args in map helpers."
+        )
     return ptr
 
 
@@ -69,13 +73,13 @@ def get_flags_val(arg, builder, local_sym_tab):
             flags_ptr = local_sym_tab[arg.id][0]
             return builder.load(flags_ptr)
         else:
-            raise ValueError(
-                f"Variable '{arg.id}' not found in local symbol table")
+            raise ValueError(f"Variable '{arg.id}' not found in local symbol table")
     elif isinstance(arg, ast.Constant) and isinstance(arg.value, int):
         return arg.value
 
     raise NotImplementedError(
-        "Only var names or int consts are supported as map helpers flags.")
+        "Only var names or int consts are supported as map helpers flags."
+    )
 
 
 def simple_string_print(string_value, module, builder, func):
@@ -87,9 +91,15 @@ def simple_string_print(string_value, module, builder, func):
     return args
 
 
-def handle_fstring_print(joined_str, module, builder, func,
-                         local_sym_tab=None, struct_sym_tab=None,
-                         local_var_metadata=None):
+def handle_fstring_print(
+    joined_str,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
     """Handle f-string formatting for bpf_printk emitter."""
     fmt_parts = []
     exprs = []
@@ -100,25 +110,34 @@ def handle_fstring_print(joined_str, module, builder, func,
         if isinstance(value, ast.Constant):
             _process_constant_in_fstring(value, fmt_parts, exprs)
         elif isinstance(value, ast.FormattedValue):
-            _process_fval(value, fmt_parts, exprs,
-                          local_sym_tab, struct_sym_tab,
-                          local_var_metadata)
+            _process_fval(
+                value,
+                fmt_parts,
+                exprs,
+                local_sym_tab,
+                struct_sym_tab,
+                local_var_metadata,
+            )
         else:
-            raise NotImplementedError(
-                f"Unsupported f-string value type: {type(value)}")
+            raise NotImplementedError(f"Unsupported f-string value type: {type(value)}")
 
     fmt_str = "".join(fmt_parts)
     args = simple_string_print(fmt_str, module, builder, func)
 
     # NOTE: Process expressions (limited to 3 due to BPF constraints)
     if len(exprs) > 3:
-        logger.warning(
-            "bpf_printk supports up to 3 args, extra args will be ignored.")
+        logger.warning("bpf_printk supports up to 3 args, extra args will be ignored.")
 
     for expr in exprs[:3]:
-        arg_value = _prepare_expr_args(expr, func, module, builder,
-                                       local_sym_tab, struct_sym_tab,
-                                       local_var_metadata)
+        arg_value = _prepare_expr_args(
+            expr,
+            func,
+            module,
+            builder,
+            local_sym_tab,
+            struct_sym_tab,
+            local_var_metadata,
+        )
         args.append(arg_value)
 
     return args
@@ -133,24 +152,31 @@ def _process_constant_in_fstring(cst, fmt_parts, exprs):
         exprs.append(ir.Constant(ir.IntType(64), cst.value))
     else:
         raise NotImplementedError(
-            f"Unsupported constant type in f-string: {type(cst.value)}")
+            f"Unsupported constant type in f-string: {type(cst.value)}"
+        )
 
 
-def _process_fval(fval, fmt_parts, exprs,
-                  local_sym_tab, struct_sym_tab,
-                  local_var_metadata):
+def _process_fval(
+    fval, fmt_parts, exprs, local_sym_tab, struct_sym_tab, local_var_metadata
+):
     """Process formatted values in f-string."""
     logger.debug(f"Processing formatted value: {ast.dump(fval)}")
 
     if isinstance(fval.value, ast.Name):
         _process_name_in_fval(fval.value, fmt_parts, exprs, local_sym_tab)
     elif isinstance(fval.value, ast.Attribute):
-        _process_attr_in_fval(fval.value, fmt_parts, exprs,
-                              local_sym_tab, struct_sym_tab,
-                              local_var_metadata)
+        _process_attr_in_fval(
+            fval.value,
+            fmt_parts,
+            exprs,
+            local_sym_tab,
+            struct_sym_tab,
+            local_var_metadata,
+        )
     else:
         raise NotImplementedError(
-            f"Unsupported formatted value in f-string: {type(fval.value)}")
+            f"Unsupported formatted value in f-string: {type(fval.value)}"
+        )
 
 
 def _process_name_in_fval(name_node, fmt_parts, exprs, local_sym_tab):
@@ -160,34 +186,39 @@ def _process_name_in_fval(name_node, fmt_parts, exprs, local_sym_tab):
         _populate_fval(var_type, name_node, fmt_parts, exprs)
 
 
-def _process_attr_in_fval(attr_node, fmt_parts, exprs,
-                          local_sym_tab, struct_sym_tab,
-                          local_var_metadata):
+def _process_attr_in_fval(
+    attr_node, fmt_parts, exprs, local_sym_tab, struct_sym_tab, local_var_metadata
+):
     """Process attribute nodes in formatted values."""
-    if (isinstance(attr_node.value, ast.Name) and
-            local_sym_tab and attr_node.value.id in local_sym_tab):
+    if (
+        isinstance(attr_node.value, ast.Name)
+        and local_sym_tab
+        and attr_node.value.id in local_sym_tab
+    ):
         var_name = attr_node.value.id
         field_name = attr_node.attr
 
         if not local_var_metadata or var_name not in local_var_metadata:
             raise ValueError(
-                f"Metadata for '{var_name}' not found in local var metadata")
+                f"Metadata for '{var_name}' not found in local var metadata"
+            )
 
         var_type = local_var_metadata[var_name]
         if var_type not in struct_sym_tab:
             raise ValueError(
-                f"Struct '{var_type}' for '{var_name}' not in symbol table")
+                f"Struct '{var_type}' for '{var_name}' not in symbol table"
+            )
 
         struct_info = struct_sym_tab[var_type]
         if field_name not in struct_info.fields:
-            raise ValueError(
-                f"Field '{field_name}' not found in struct '{var_type}'")
+            raise ValueError(f"Field '{field_name}' not found in struct '{var_type}'")
 
         field_type = struct_info.field_type(field_name)
         _populate_fval(field_type, attr_node, fmt_parts, exprs)
     else:
         raise NotImplementedError(
-            "Only simple attribute on local vars is supported in f-strings.")
+            "Only simple attribute on local vars is supported in f-strings."
+        )
 
 
 def _populate_fval(ftype, node, fmt_parts, exprs):
@@ -202,14 +233,14 @@ def _populate_fval(ftype, node, fmt_parts, exprs):
             exprs.append(node)
         else:
             raise NotImplementedError(
-                f"Unsupported integer width in f-string: {ftype.width}")
+                f"Unsupported integer width in f-string: {ftype.width}"
+            )
     elif ftype == ir.PointerType(ir.IntType(8)):
         # NOTE: We assume i8* is a string
         fmt_parts.append("%s")
         exprs.append(node)
     else:
-        raise NotImplementedError(
-            f"Unsupported field type in f-string: {ftype}")
+        raise NotImplementedError(f"Unsupported field type in f-string: {ftype}")
 
 
 def _create_format_string_global(fmt_str, func, module, builder):
@@ -218,11 +249,11 @@ def _create_format_string_global(fmt_str, func, module, builder):
     func._fmt_counter += 1
 
     fmt_gvar = ir.GlobalVariable(
-        module, ir.ArrayType(ir.IntType(8), len(fmt_str)), name=fmt_name)
+        module, ir.ArrayType(ir.IntType(8), len(fmt_str)), name=fmt_name
+    )
     fmt_gvar.global_constant = True
     fmt_gvar.initializer = ir.Constant(
-        ir.ArrayType(ir.IntType(8), len(fmt_str)),
-        bytearray(fmt_str.encode("utf8"))
+        ir.ArrayType(ir.IntType(8), len(fmt_str)), bytearray(fmt_str.encode("utf8"))
     )
     fmt_gvar.linkage = "internal"
     fmt_gvar.align = 1
@@ -230,13 +261,20 @@ def _create_format_string_global(fmt_str, func, module, builder):
     return builder.bitcast(fmt_gvar, ir.PointerType())
 
 
-def _prepare_expr_args(expr, func, module, builder,
-                       local_sym_tab, struct_sym_tab,
-                       local_var_metadata):
+def _prepare_expr_args(
+    expr, func, module, builder, local_sym_tab, struct_sym_tab, local_var_metadata
+):
     """Evaluate and prepare an expression to use as an arg for bpf_printk."""
-    val, _ = eval_expr(func, module, builder, expr,
-                       local_sym_tab, None, struct_sym_tab,
-                       local_var_metadata)
+    val, _ = eval_expr(
+        func,
+        module,
+        builder,
+        expr,
+        local_sym_tab,
+        None,
+        struct_sym_tab,
+        local_var_metadata,
+    )
 
     if val:
         if isinstance(val.type, ir.PointerType):
@@ -246,19 +284,19 @@ def _prepare_expr_args(expr, func, module, builder,
                 val = builder.sext(val, ir.IntType(64))
         else:
             logger.warning(
-                "Only int and ptr supported in bpf_printk args. "
-                "Others default to 0.")
+                "Only int and ptr supported in bpf_printk args. " "Others default to 0."
+            )
             val = ir.Constant(ir.IntType(64), 0)
         return val
     else:
         logger.warning(
             "Failed to evaluate expression for bpf_printk argument. "
-            "It will be converted to 0.")
+            "It will be converted to 0."
+        )
         return ir.Constant(ir.IntType(64), 0)
 
 
-def get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab,
-                          local_var_metadata):
+def get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab, local_var_metadata):
     """Extract data pointer and size information for perf event output."""
     if isinstance(data_arg, ast.Name):
         data_name = data_arg.id
@@ -266,7 +304,8 @@ def get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab,
             data_ptr = local_sym_tab[data_name][0]
         else:
             raise ValueError(
-                f"Data variable {data_name} not found in local symbol table.")
+                f"Data variable {data_name} not found in local symbol table."
+            )
 
         # Check if data_name is a struct
         if local_var_metadata and data_name in local_var_metadata:
@@ -277,12 +316,14 @@ def get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab,
                 return data_ptr, size_val
             else:
                 raise ValueError(
-                    f"Struct {data_type} for {data_name} not in symbol table.")
+                    f"Struct {data_type} for {data_name} not in symbol table."
+                )
         else:
             raise ValueError(
                 f"Metadata for variable {data_name} "
-                "not found in local variable metadata.")
+                "not found in local variable metadata."
+            )
     else:
         raise NotImplementedError(
-            "Only simple object names are supported "
-            "as data in perf event output.")
+            "Only simple object names are supported " "as data in perf event output."
+        )
