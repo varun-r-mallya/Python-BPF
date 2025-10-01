@@ -2,7 +2,7 @@ import ast
 from llvmlite import ir
 from pythonbpf.expr_pass import eval_expr
 from enum import Enum
-from .helper_utils import HelperHandlerRegistry, get_or_create_ptr_from_arg
+from .helper_utils import HelperHandlerRegistry, get_or_create_ptr_from_arg, get_flags_val
 
 
 class BPFHelperID(Enum):
@@ -244,28 +244,7 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func,
 
     key_ptr = get_or_create_ptr_from_arg(key_arg, builder, local_sym_tab)
     value_ptr = get_or_create_ptr_from_arg(value_arg, builder, local_sym_tab)
-
-    # Handle flags argument (defaults to 0)
-    if flags_arg is not None:
-        if isinstance(flags_arg, ast.Constant) and isinstance(flags_arg.value, int):
-            flags_val = flags_arg.value
-        elif isinstance(flags_arg, ast.Name):
-            flags_name = flags_arg.id
-            if local_sym_tab and flags_name in local_sym_tab:
-                # Assume it's a stored integer value, load it
-                flags_ptr = local_sym_tab[flags_name][0]
-                flags_val = builder.load(flags_ptr)
-            else:
-                raise ValueError(
-                    f"Flags variable {flags_name} not found in local symbol table.")
-        else:
-            raise NotImplementedError(
-                "Only integer constants and simple variable names are supported as flags in map update.")
-    else:
-        flags_val = 0
-
-    if key_ptr is None or value_ptr is None:
-        raise ValueError("Key pointer or value pointer is None.")
+    flags_val = get_flags_val(flags_arg, builder, local_sym_tab)
 
     map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
     fn_type = ir.FunctionType(
@@ -275,7 +254,6 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func,
     )
     fn_ptr_type = ir.PointerType(fn_type)
 
-    # helper id
     fn_addr = ir.Constant(ir.IntType(
         64), BPFHelperID.BPF_MAP_UPDATE_ELEM.value)
     fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
