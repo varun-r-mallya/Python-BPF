@@ -80,7 +80,7 @@ def bpf_printk_emitter(call, map_ptr, module, builder, func,
     elif isinstance(call.args[0], ast.Constant) and isinstance(call.args[0].value, str):
         # TODO: We are onbly supporting single arguments for now.
         # In case of multiple args, the first one will be taken.
-        args = _simple_string_print(call.args[0], module, builder, func)
+        args = _simple_string_print(call.args[0].value, module, builder, func)
     else:
         raise NotImplementedError(
             "Only simple string literals or f-strings are supported in bpf_printk.")
