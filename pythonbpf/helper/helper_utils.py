@@ -48,3 +48,22 @@ def get_or_create_ptr_from_arg(arg, builder, local_sym_tab):
         raise NotImplementedError(
             "Only simple variable names are supported as args in map helpers.")
     return ptr
+
+
+def get_flags_val(arg, builder, local_sym_tab):
+    """Extract or create flags value from the call arguments."""
+    if not arg:
+        return 0
+
+    if isinstance(arg, ast.Name):
+        if local_sym_tab and arg.id in local_sym_tab:
+            flags_ptr = local_sym_tab[arg.id][0]
+            return builder.load(flags_ptr)
+        else:
+            raise ValueError(
+                f"Variable '{arg.id}' not found in local symbol table")
+    elif isinstance(arg, ast.Constant) and isinstance(arg.value, int):
+        return arg.value
+
+    raise NotImplementedError(
+        "Only simple variable names or integer constants are supported as flags in map helpers.")
