@@ -51,7 +51,7 @@ def create_bpf_map(module, map_name, map_params):
 
 
 def create_map_debug_info(module, map_global, map_name, map_params):
-    """Generate debug information metadata for BPF map"""
+    """Generate debug information metadata for BPF maps HASH and PERF_EVENT_ARRAY"""
     generator = DebugInfoGenerator(module)
 
     uint_type = generator.get_uint32_type()
