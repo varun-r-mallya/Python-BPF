@@ -30,7 +30,6 @@ def bpf_ktime_get_ns_emitter(
     func,
     local_sym_tab=None,
     struct_sym_tab=None,
-    local_var_metadata=None,
 ):
     """
     Emit LLVM IR for bpf_ktime_get_ns helper function call.
@@ -53,7 +52,6 @@ def bpf_map_lookup_elem_emitter(
     func,
     local_sym_tab=None,
     struct_sym_tab=None,
-    local_var_metadata=None,
 ):
     """
     Emit LLVM IR for bpf_map_lookup_elem helper function call.
@@ -89,7 +87,6 @@ def bpf_printk_emitter(
     func,
     local_sym_tab=None,
     struct_sym_tab=None,
-    local_var_metadata=None,
 ):
     """Emit LLVM IR for bpf_printk helper function call."""
     if not hasattr(func, "_fmt_counter"):
@@ -107,7 +104,6 @@ def bpf_printk_emitter(
             func,
             local_sym_tab,
             struct_sym_tab,
-            local_var_metadata,
         )
     elif isinstance(call.args[0], ast.Constant) and isinstance(call.args[0].value, str):
         # TODO: We are only supporting single arguments for now.
@@ -138,7 +134,6 @@ def bpf_map_update_elem_emitter(
     func,
     local_sym_tab=None,
     struct_sym_tab=None,
-    local_var_metadata=None,
 ):
     """
     Emit LLVM IR for bpf_map_update_elem helper function call.
@@ -190,7 +185,6 @@ def bpf_map_delete_elem_emitter(
     func,
     local_sym_tab=None,
     struct_sym_tab=None,
-    local_var_metadata=None,
 ):
     """
     Emit LLVM IR for bpf_map_delete_elem helper function call.
@@ -228,7 +222,6 @@ def bpf_get_current_pid_tgid_emitter(
     func,
     local_sym_tab=None,
     struct_sym_tab=None,
-    local_var_metadata=None,
 ):
     """
     Emit LLVM IR for bpf_get_current_pid_tgid helper function call.
@@ -255,7 +248,6 @@ def bpf_perf_event_output_handler(
     func,
     local_sym_tab=None,
     struct_sym_tab=None,
-    local_var_metadata=None,
 ):
     if len(call.args) != 1:
         raise ValueError(
@@ -264,9 +256,7 @@ def bpf_perf_event_output_handler(
     data_arg = call.args[0]
     ctx_ptr = func.args[0]  # First argument to the function is ctx
 
-    data_ptr, size_val = get_data_ptr_and_size(
-        data_arg, local_sym_tab, struct_sym_tab, local_var_metadata
-    )
+    data_ptr, size_val = get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab)
 
     # BPF_F_CURRENT_CPU is -1 in 32 bit
     flags_val = ir.Constant(ir.IntType(64), 0xFFFFFFFF)
@@ -304,7 +294,6 @@ def handle_helper_call(
     local_sym_tab=None,
     map_sym_tab=None,
     struct_sym_tab=None,
-    local_var_metadata=None,
 ):
     """Process a BPF helper function call and emit the appropriate LLVM IR."""
 
@@ -323,7 +312,6 @@ def handle_helper_call(
             func,
             local_sym_tab,
             struct_sym_tab,
-            local_var_metadata,
         )
 
     # Handle direct function calls (e.g., print(), ktime())

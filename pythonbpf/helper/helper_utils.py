@@ -100,7 +100,6 @@ def handle_fstring_print(
     func,
     local_sym_tab=None,
     struct_sym_tab=None,
-    local_var_metadata=None,
 ):
     """Handle f-string formatting for bpf_printk emitter."""
     fmt_parts = []
@@ -118,7 +117,6 @@ def handle_fstring_print(
                 exprs,
                 local_sym_tab,
                 struct_sym_tab,
-                local_var_metadata,
             )
         else:
             raise NotImplementedError(f"Unsupported f-string value type: {type(value)}")
@@ -138,7 +136,6 @@ def handle_fstring_print(
             builder,
             local_sym_tab,
             struct_sym_tab,
-            local_var_metadata,
         )
         args.append(arg_value)
 
@@ -158,9 +155,7 @@ def _process_constant_in_fstring(cst, fmt_parts, exprs):
         )
 
 
-def _process_fval(
-    fval, fmt_parts, exprs, local_sym_tab, struct_sym_tab, local_var_metadata
-):
+def _process_fval(fval, fmt_parts, exprs, local_sym_tab, struct_sym_tab):
     """Process formatted values in f-string."""
     logger.debug(f"Processing formatted value: {ast.dump(fval)}")
 
@@ -173,7 +168,6 @@ def _process_fval(
             exprs,
             local_sym_tab,
             struct_sym_tab,
-            local_var_metadata,
         )
     else:
         raise NotImplementedError(
@@ -188,9 +182,7 @@ def _process_name_in_fval(name_node, fmt_parts, exprs, local_sym_tab):
         _populate_fval(var_type, name_node, fmt_parts, exprs)
 
 
-def _process_attr_in_fval(
-    attr_node, fmt_parts, exprs, local_sym_tab, struct_sym_tab, local_var_metadata
-):
+def _process_attr_in_fval(attr_node, fmt_parts, exprs, local_sym_tab, struct_sym_tab):
     """Process attribute nodes in formatted values."""
     if (
         isinstance(attr_node.value, ast.Name)
@@ -200,12 +192,7 @@ def _process_attr_in_fval(
         var_name = attr_node.value.id
         field_name = attr_node.attr
 
-        if not local_var_metadata or var_name not in local_var_metadata:
-            raise ValueError(
-                f"Metadata for '{var_name}' not found in local var metadata"
-            )
-
-        var_type = local_var_metadata[var_name]
+        var_type = local_sym_tab[var_name].metadata
         if var_type not in struct_sym_tab:
             raise ValueError(
                 f"Struct '{var_type}' for '{var_name}' not in symbol table"
@@ -263,9 +250,7 @@ def _create_format_string_global(fmt_str, func, module, builder):
     return builder.bitcast(fmt_gvar, ir.PointerType())
 
 
-def _prepare_expr_args(
-    expr, func, module, builder, local_sym_tab, struct_sym_tab, local_var_metadata
-):
+def _prepare_expr_args(expr, func, module, builder, local_sym_tab, struct_sym_tab):
     """Evaluate and prepare an expression to use as an arg for bpf_printk."""
     val, _ = eval_expr(
         func,
@@ -275,7 +260,6 @@ def _prepare_expr_args(
         local_sym_tab,
         None,
         struct_sym_tab,
-        local_var_metadata,
     )
 
     if val:
@@ -298,7 +282,7 @@ def _prepare_expr_args(
         return ir.Constant(ir.IntType(64), 0)
 
 
-def get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab, local_var_metadata):
+def get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab):
     """Extract data pointer and size information for perf event output."""
     if isinstance(data_arg, ast.Name):
         data_name = data_arg.id
@@ -310,22 +294,14 @@ def get_data_ptr_and_size(data_arg, local_sym_tab, struct_sym_tab, local_var_met
             )
 
         # Check if data_name is a struct
-        if local_var_metadata and data_name in local_var_metadata:
-            data_type = local_var_metadata[data_name]
-            if data_type in struct_sym_tab:
-                struct_info = struct_sym_tab[data_type]
-                size_val = ir.Constant(ir.IntType(64), struct_info.size)
-                return data_ptr, size_val
-            else:
-                raise ValueError(
-                    f"Struct {data_type} for {data_name} not in symbol table."
-                )
+        data_type = local_sym_tab[data_name].metadata
+        if data_type in struct_sym_tab:
+            struct_info = struct_sym_tab[data_type]
+            size_val = ir.Constant(ir.IntType(64), struct_info.size)
+            return data_ptr, size_val
         else:
-            raise ValueError(
-                f"Metadata for variable {data_name} "
-                "not found in local variable metadata."
-            )
+            raise ValueError(f"Struct {data_type} for {data_name} not in symbol table.")
     else:
         raise NotImplementedError(
-            "Only simple object names are supported " "as data in perf event output."
+            "Only simple object names are supported as data in perf event output."
         )
