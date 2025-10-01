@@ -112,7 +112,7 @@ def handle_fstring_print(joined_str, module, builder, func,
 
     # NOTE: Process expressions (limited to 3 due to BPF constraints)
     if len(exprs) > 3:
-        logger.warn(
+        logger.warning(
             "bpf_printk supports up to 3 args, extra args will be ignored.")
 
     for expr in exprs[:3]:
@@ -246,13 +246,13 @@ def _prepare_expr_args(expr, func, module, builder,
             if val.type.width < 64:
                 val = builder.sext(val, ir.IntType(64))
         else:
-            logger.warn(
+            logger.warning(
                 "Only int and ptr supported in bpf_printk args. "
                 "Others default to 0.")
             val = ir.Constant(ir.IntType(64), 0)
         return val
     else:
-        logger.warn(
+        logger.warning(
             "Failed to evaluate expression for bpf_printk argument. "
             "It will be converted to 0.")
         return ir.Constant(ir.IntType(64), 0)
