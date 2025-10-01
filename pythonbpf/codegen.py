@@ -2,7 +2,7 @@ import ast
 from llvmlite import ir
 from .license_pass import license_processing
 from .functions_pass import func_proc
-from pythonbpf.maps import maps_proc
+from .maps import maps_proc
 from .structs import structs_proc
 from .globals_pass import globals_processing
 from .debuginfo import DW_LANG_C11, DwarfBehaviorEnum
@@ -52,45 +52,67 @@ def compile_to_ir(filename: str, output: str):
     module.data_layout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
     module.triple = "bpf"
 
-    if not hasattr(module, '_debug_compile_unit'):
-        module._file_metadata = module.add_debug_info("DIFile", {  # type: ignore
-            "filename": filename,
-            "directory": os.path.dirname(filename)
-        })
+    if not hasattr(module, "_debug_compile_unit"):
+        module._file_metadata = module.add_debug_info(
+            "DIFile",
+            {  # type: ignore
+                "filename": filename,
+                "directory": os.path.dirname(filename),
+            },
+        )
 
-        module._debug_compile_unit = module.add_debug_info("DICompileUnit", {  # type: ignore
-            "language": DW_LANG_C11,
-            "file": module._file_metadata,  # type: ignore
-            "producer": f"PythonBPF {VERSION}",
-            "isOptimized": True,  # TODO: This is probably not true
-            # TODO: add a global field here that keeps track of all the globals. Works without it, but I think it might
-            # be required for kprobes.
-            "runtimeVersion": 0,
-            "emissionKind": 1,
-            "splitDebugInlining": False,
-            "nameTableKind": 0
-        }, is_distinct=True)
+        module._debug_compile_unit = module.add_debug_info(
+            "DICompileUnit",
+            {  # type: ignore
+                "language": DW_LANG_C11,
+                "file": module._file_metadata,  # type: ignore
+                "producer": f"PythonBPF {VERSION}",
+                "isOptimized": True,  # TODO: This is probably not true
+                # TODO: add a global field here that keeps track of all the globals. Works without it, but I think it might
+                # be required for kprobes.
+                "runtimeVersion": 0,
+                "emissionKind": 1,
+                "splitDebugInlining": False,
+                "nameTableKind": 0,
+            },
+            is_distinct=True,
+        )
 
-        module.add_named_metadata(
-            "llvm.dbg.cu", module._debug_compile_unit)  # type: ignore
+        module.add_named_metadata("llvm.dbg.cu", module._debug_compile_unit)  # type: ignore
 
     processor(source, filename, module)
 
-    wchar_size = module.add_metadata([DwarfBehaviorEnum.ERROR_IF_MISMATCH,
-                                      "wchar_size",
-                                      ir.Constant(ir.IntType(32), 4)])
-    frame_pointer = module.add_metadata([DwarfBehaviorEnum.OVERRIDE_USE_LARGEST,
-                                         "frame-pointer",
-                                         ir.Constant(ir.IntType(32), 2)])
+    wchar_size = module.add_metadata(
+        [
+            DwarfBehaviorEnum.ERROR_IF_MISMATCH,
+            "wchar_size",
+            ir.Constant(ir.IntType(32), 4),
+        ]
+    )
+    frame_pointer = module.add_metadata(
+        [
+            DwarfBehaviorEnum.OVERRIDE_USE_LARGEST,
+            "frame-pointer",
+            ir.Constant(ir.IntType(32), 2),
+        ]
+    )
     # Add Debug Info Version (3 = DWARF v3, which LLVM expects)
-    debug_info_version = module.add_metadata([DwarfBehaviorEnum.WARNING_IF_MISMATCH,
-                                              "Debug Info Version",
-                                              ir.Constant(ir.IntType(32), 3)])
+    debug_info_version = module.add_metadata(
+        [
+            DwarfBehaviorEnum.WARNING_IF_MISMATCH,
+            "Debug Info Version",
+            ir.Constant(ir.IntType(32), 3),
+        ]
+    )
 
     # Add explicit DWARF version 5
-    dwarf_version = module.add_metadata([DwarfBehaviorEnum.OVERRIDE_USE_LARGEST,
-                                         "Dwarf Version",
-                                         ir.Constant(ir.IntType(32), 5)])
+    dwarf_version = module.add_metadata(
+        [
+            DwarfBehaviorEnum.OVERRIDE_USE_LARGEST,
+            "Dwarf Version",
+            ir.Constant(ir.IntType(32), 5),
+        ]
+    )
 
     module.add_named_metadata("llvm.module.flags", wchar_size)
     module.add_named_metadata("llvm.module.flags", frame_pointer)
@@ -101,14 +123,14 @@ def compile_to_ir(filename: str, output: str):
 
     print(f"IR written to {output}")
     with open(output, "w") as f:
-        f.write(f"source_filename = \"{filename}\"\n")
+        f.write(f'source_filename = "{filename}"\n')
         f.write(str(module))
         f.write("\n")
 
     return output
 
 
-def compile():
+def compile() -> bool:
     # Look one level up the stack to the caller of this function
     caller_frame = inspect.stack()[1]
     caller_file = Path(caller_frame.filename).resolve()
@@ -116,29 +138,54 @@ def compile():
     ll_file = Path("/tmp") / caller_file.with_suffix(".ll").name
     o_file = caller_file.with_suffix(".o")
 
-    compile_to_ir(str(caller_file), str(ll_file))
+    success = True
+    success = compile_to_ir(str(caller_file), str(ll_file)) and success
 
-    subprocess.run([
-        "llc", "-march=bpf", "-filetype=obj", "-O2",
-        str(ll_file), "-o", str(o_file)
-    ], check=True)
+    success = (
+        subprocess.run(
+            [
+                "llc",
+                "-march=bpf",
+                "-filetype=obj",
+                "-O2",
+                str(ll_file),
+                "-o",
+                str(o_file),
+            ],
+            check=True,
+        )
+        and success
+    )
 
-    print(f"Object written to {o_file}, {ll_file} can be removed")
+    print(f"Object written to {o_file}")
+    return success
 
 
 def BPF() -> BpfProgram:
     caller_frame = inspect.stack()[1]
     src = inspect.getsource(caller_frame.frame)
-    with tempfile.NamedTemporaryFile(mode="w+", delete=True, suffix=".py") as f, \
-            tempfile.NamedTemporaryFile(mode="w+", delete=True, suffix=".ll") as inter, \
-            tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".o") as obj_file:
+    with tempfile.NamedTemporaryFile(
+        mode="w+", delete=True, suffix=".py"
+    ) as f, tempfile.NamedTemporaryFile(
+        mode="w+", delete=True, suffix=".ll"
+    ) as inter, tempfile.NamedTemporaryFile(
+        mode="w+", delete=False, suffix=".o"
+    ) as obj_file:
         f.write(src)
         f.flush()
         source = f.name
         compile_to_ir(source, str(inter.name))
-        subprocess.run([
-            "llc", "-march=bpf", "-filetype=obj", "-O2",
-            str(inter.name), "-o", str(obj_file.name)
-        ], check=True)
+        subprocess.run(
+            [
+                "llc",
+                "-march=bpf",
+                "-filetype=obj",
+                "-O2",
+                str(inter.name),
+                "-o",
+                str(obj_file.name),
+            ],
+            check=True,
+        )
 
         return BpfProgram(str(obj_file.name))

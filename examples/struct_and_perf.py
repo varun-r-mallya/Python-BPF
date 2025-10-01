@@ -2,7 +2,7 @@ from pythonbpf import bpf, map, struct, section, bpfglobal, compile
 from pythonbpf.helpers import ktime, pid
 from pythonbpf.maps import PerfEventArray
 
-from ctypes import c_void_p, c_int64, c_int32, c_uint64
+from ctypes import c_void_p, c_int32, c_uint64
 
 
 @bpf
@@ -27,7 +27,10 @@ def hello(ctx: c_void_p) -> c_int32:
     dataobj.pid = pid()
     dataobj.ts = ktime()
     # dataobj.comm = strobj
-    print(f"clone called at {dataobj.ts} by pid {dataobj.pid}, comm {strobj}")
+    print(
+        f"clone called at {dataobj.ts} by pid {
+            dataobj.pid}, comm {strobj} at time {ts}"
+    )
     events.output(dataobj)
     return c_int32(0)
 

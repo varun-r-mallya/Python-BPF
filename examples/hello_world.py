@@ -1,4 +1,4 @@
-from pythonbpf import bpf, section, bpfglobal, compile, BPF
+from pythonbpf import bpf, section, bpfglobal, BPF
 from ctypes import c_void_p, c_int64
 
 # Instructions to how to run this program
@@ -13,10 +13,12 @@ def hello_world(ctx: c_void_p) -> c_int64:
     print("Hello, World!")
     return c_int64(0)
 
+
 @bpf
 @bpfglobal
 def LICENSE() -> str:
     return "GPL"
+
 
 b = BPF()
 b.load_and_attach()

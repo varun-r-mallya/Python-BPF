@@ -11,10 +11,10 @@ def emit_license(module: ir.Module, license_str: str):
 
     gvar.initializer = ir.Constant(ty, elems)  # type: ignore
 
-    gvar.align = 1                      # type: ignore
-    gvar.linkage = "dso_local"          # type: ignore
+    gvar.align = 1  # type: ignore
+    gvar.linkage = "dso_local"  # type: ignore
     gvar.global_constant = False
-    gvar.section = "license"            # type: ignore
+    gvar.section = "license"  # type: ignore
 
     return gvar
 
@@ -26,7 +26,8 @@ def license_processing(tree, module):
         if isinstance(node, ast.FunctionDef) and node.name == "LICENSE":
             # check decorators
             decorators = [
-                dec.id for dec in node.decorator_list if isinstance(dec, ast.Name)]
+                dec.id for dec in node.decorator_list if isinstance(dec, ast.Name)
+            ]
             if "bpf" in decorators and "bpfglobal" in decorators:
                 if count == 0:
                     count += 1

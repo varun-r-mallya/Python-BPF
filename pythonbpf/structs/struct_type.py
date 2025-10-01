@@ -15,9 +15,11 @@ class StructType:
 
     def gep(self, builder, ptr, field_name):
         idx = self.field_idx(field_name)
-        return builder.gep(ptr, [ir.Constant(ir.IntType(32), 0),
-                                 ir.Constant(ir.IntType(32), idx)],
-                           inbounds=True)
+        return builder.gep(
+            ptr,
+            [ir.Constant(ir.IntType(32), 0), ir.Constant(ir.IntType(32), idx)],
+            inbounds=True,
+        )
 
     def field_size(self, field_name):
         fld = self.fields[field_name]

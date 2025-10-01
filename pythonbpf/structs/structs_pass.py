@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def structs_proc(tree, module, chunks):
-    """ Process all class definitions to find BPF structs """
+    """Process all class definitions to find BPF structs"""
     structs_sym_tab = {}
     for cls_node in chunks:
         if is_bpf_struct(cls_node):
@@ -33,7 +33,7 @@ def is_bpf_struct(cls_node):
 
 
 def process_bpf_struct(cls_node, module):
-    """ Process a single BPF struct definition """
+    """Process a single BPF struct definition"""
 
     fields = parse_struct_fields(cls_node)
     field_types = list(fields.values())
@@ -44,12 +44,11 @@ def process_bpf_struct(cls_node, module):
 
 
 def parse_struct_fields(cls_node):
-    """ Parse fields of a struct class node """
+    """Parse fields of a struct class node"""
     fields = {}
 
     for item in cls_node.body:
-        if isinstance(item, ast.AnnAssign) and \
-           isinstance(item.target, ast.Name):
+        if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
             fields[item.target.id] = get_type_from_ann(item.annotation)
         else:
             logger.error(f"Unsupported struct field: {ast.dump(item)}")
@@ -58,9 +57,8 @@ def parse_struct_fields(cls_node):
 
 
 def get_type_from_ann(annotation):
-    """ Convert an AST annotation node to an LLVM IR type for struct fields"""
-    if isinstance(annotation, ast.Call) and \
-       isinstance(annotation.func, ast.Name):
+    """Convert an AST annotation node to an LLVM IR type for struct fields"""
+    if isinstance(annotation, ast.Call) and isinstance(annotation.func, ast.Name):
         if annotation.func.id == "str":
             # Char array
             # Assumes constant integer argument
@@ -74,7 +72,7 @@ def get_type_from_ann(annotation):
 
 
 def calc_struct_size(field_types):
-    """ Calculate total size of the struct with alignment and padding """
+    """Calculate total size of the struct with alignment and padding"""
     curr_offset = 0
     for ftype in field_types:
         if isinstance(ftype, ir.IntType):

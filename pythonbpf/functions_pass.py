@@ -27,7 +27,9 @@ def get_probe_string(func_node):
     return "helper"
 
 
-def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_sym_tab):
+def handle_assign(
+    func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_sym_tab
+):
     """Handle assignment statements in the function body."""
     if len(stmt.targets) != 1:
         print("Unsupported multiassignment")
@@ -51,10 +53,20 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
 
             if field_name in struct_info.fields:
                 field_ptr = struct_info.gep(
-                    builder, local_sym_tab[var_name][0], field_name)
-                val = eval_expr(func, module, builder, rval,
-                                local_sym_tab, map_sym_tab, structs_sym_tab)
-                if isinstance(struct_info.field_type(field_name), ir.ArrayType) and val[1] == ir.PointerType(ir.IntType(8)):
+                    builder, local_sym_tab[var_name][0], field_name
+                )
+                val = eval_expr(
+                    func,
+                    module,
+                    builder,
+                    rval,
+                    local_sym_tab,
+                    map_sym_tab,
+                    structs_sym_tab,
+                )
+                if isinstance(struct_info.field_type(field_name), ir.ArrayType) and val[
+                    1
+                ] == ir.PointerType(ir.IntType(8)):
                     # TODO: Figure it out, not a priority rn
                     # Special case for string assignment to char array
                     # str_len = struct_info["field_types"][field_idx].count
@@ -81,17 +93,21 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
             # Assume c_int64 for now
             # var = builder.alloca(ir.IntType(64), name=var_name)
             # var.align = 8
-            builder.store(ir.Constant(ir.IntType(64), rval.value),
-                          local_sym_tab[var_name][0])
+            builder.store(
+                ir.Constant(ir.IntType(64),
+                            rval.value), local_sym_tab[var_name][0]
+            )
             # local_sym_tab[var_name] = var
             print(f"Assigned constant {rval.value} to {var_name}")
         elif isinstance(rval.value, str):
-            str_val = rval.value.encode('utf-8') + b'\x00'
-            str_const = ir.Constant(ir.ArrayType(
-                ir.IntType(8), len(str_val)), bytearray(str_val))
+            str_val = rval.value.encode("utf-8") + b"\x00"
+            str_const = ir.Constant(
+                ir.ArrayType(ir.IntType(8), len(str_val)), bytearray(str_val)
+            )
             global_str = ir.GlobalVariable(
-                module, str_const.type, name=f"{var_name}_str")
-            global_str.linkage = 'internal'
+                module, str_const.type, name=f"{var_name}_str"
+            )
+            global_str.linkage = "internal"
             global_str.global_constant = True
             global_str.initializer = str_const
             str_ptr = builder.bitcast(
@@ -104,27 +120,51 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
         if isinstance(rval.func, ast.Name):
             call_type = rval.func.id
             print(f"Assignment call type: {call_type}")
-            if call_type in num_types and len(rval.args) == 1 and isinstance(rval.args[0], ast.Constant) and isinstance(rval.args[0].value, int):
+            if (
+                call_type in num_types
+                and len(rval.args) == 1
+                and isinstance(rval.args[0], ast.Constant)
+                and isinstance(rval.args[0].value, int)
+            ):
                 ir_type = ctypes_to_ir(call_type)
                 # var = builder.alloca(ir_type, name=var_name)
                 # var.align = ir_type.width // 8
-                builder.store(ir.Constant(
-                    ir_type, rval.args[0].value), local_sym_tab[var_name][0])
-                print(f"Assigned {call_type} constant "
-                      f"{rval.args[0].value} to {var_name}")
+                builder.store(
+                    ir.Constant(
+                        ir_type, rval.args[0].value), local_sym_tab[var_name][0]
+                )
+                print(
+                    f"Assigned {call_type} constant "
+                    f"{rval.args[0].value} to {var_name}"
+                )
                 # local_sym_tab[var_name] = var
             elif HelperHandlerRegistry.has_handler(call_type):
                 # var = builder.alloca(ir.IntType(64), name=var_name)
                 # var.align = 8
                 val = handle_helper_call(
-                    rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
+                    rval,
+                    module,
+                    builder,
+                    func,
+                    local_sym_tab,
+                    map_sym_tab,
+                    structs_sym_tab,
+                    local_var_metadata,
+                )
                 builder.store(val[0], local_sym_tab[var_name][0])
                 # local_sym_tab[var_name] = var
                 print(f"Assigned constant {rval.func.id} to {var_name}")
             elif call_type == "deref" and len(rval.args) == 1:
                 print(f"Handling deref assignment {ast.dump(rval)}")
-                val = eval_expr(func, module, builder, rval,
-                                local_sym_tab, map_sym_tab, structs_sym_tab)
+                val = eval_expr(
+                    func,
+                    module,
+                    builder,
+                    rval,
+                    local_sym_tab,
+                    map_sym_tab,
+                    structs_sym_tab,
+                )
                 if val is None:
                     print("Failed to evaluate deref argument")
                     return
@@ -149,14 +189,23 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
             if isinstance(rval.func.value, ast.Name):
                 # TODO: probably a struct access
                 print(f"TODO STRUCT ACCESS {ast.dump(rval)}")
-            elif isinstance(rval.func.value, ast.Call) and isinstance(rval.func.value.func, ast.Name):
+            elif isinstance(rval.func.value, ast.Call) and isinstance(
+                rval.func.value.func, ast.Name
+            ):
                 map_name = rval.func.value.func.id
                 method_name = rval.func.attr
                 if map_name in map_sym_tab:
-                    map_ptr = map_sym_tab[map_name]
                     if HelperHandlerRegistry.has_handler(method_name):
                         val = handle_helper_call(
-                            rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
+                            rval,
+                            module,
+                            builder,
+                            func,
+                            local_sym_tab,
+                            map_sym_tab,
+                            structs_sym_tab,
+                            local_var_metadata,
+                        )
                         # var = builder.alloca(ir.IntType(64), name=var_name)
                         # var.align = 8
                         builder.store(val[0], local_sym_tab[var_name][0])
@@ -166,8 +215,9 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
         else:
             print("Unsupported assignment call function type")
     elif isinstance(rval, ast.BinOp):
-        handle_binary_op(rval, module, builder, var_name,
-                         local_sym_tab, map_sym_tab, func)
+        handle_binary_op(
+            rval, module, builder, var_name, local_sym_tab, map_sym_tab, func
+        )
     else:
         print("Unsupported assignment value type")
 
@@ -204,8 +254,9 @@ def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
         if len(cond.ops) != 1 or len(cond.comparators) != 1:
             print("Unsupported complex comparison")
             return None
-        rhs = eval_expr(func, module, builder,
-                        cond.comparators[0], local_sym_tab, map_sym_tab)[0]
+        rhs = eval_expr(
+            func, module, builder, cond.comparators[0], local_sym_tab, map_sym_tab
+        )[0]
         op = cond.ops[0]
 
         if lhs.type != rhs.type:
@@ -239,10 +290,12 @@ def handle_cond(func, module, builder, cond, local_sym_tab, map_sym_tab):
         return None
 
 
-def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_sym_tab=None):
+def handle_if(
+    func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_sym_tab=None
+):
     """Handle if statements in the function body."""
     print("Handling if statement")
-    start = builder.block.parent
+    # start = builder.block.parent
     then_block = func.append_basic_block(name="if.then")
     merge_block = func.append_basic_block(name="if.end")
     if stmt.orelse:
@@ -259,48 +312,84 @@ def handle_if(func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_s
 
     builder.position_at_end(then_block)
     for s in stmt.body:
-        process_stmt(func, module, builder, s,
-                     local_sym_tab, map_sym_tab, structs_sym_tab, False)
+        process_stmt(
+            func, module, builder, s, local_sym_tab, map_sym_tab, structs_sym_tab, False
+        )
     if not builder.block.is_terminated:
         builder.branch(merge_block)
 
     if else_block:
         builder.position_at_end(else_block)
         for s in stmt.orelse:
-            process_stmt(func, module, builder, s,
-                         local_sym_tab, map_sym_tab, structs_sym_tab, False)
+            process_stmt(
+                func,
+                module,
+                builder,
+                s,
+                local_sym_tab,
+                map_sym_tab,
+                structs_sym_tab,
+                False,
+            )
         if not builder.block.is_terminated:
             builder.branch(merge_block)
 
     builder.position_at_end(merge_block)
 
 
-def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, structs_sym_tab, did_return, ret_type=ir.IntType(64)):
+def process_stmt(
+    func,
+    module,
+    builder,
+    stmt,
+    local_sym_tab,
+    map_sym_tab,
+    structs_sym_tab,
+    did_return,
+    ret_type=ir.IntType(64),
+):
     print(f"Processing statement: {ast.dump(stmt)}")
     if isinstance(stmt, ast.Expr):
         print(local_var_metadata)
-        handle_expr(func, module, builder, stmt, local_sym_tab,
-                    map_sym_tab, structs_sym_tab, local_var_metadata)
+        handle_expr(
+            func,
+            module,
+            builder,
+            stmt,
+            local_sym_tab,
+            map_sym_tab,
+            structs_sym_tab,
+            local_var_metadata,
+        )
     elif isinstance(stmt, ast.Assign):
-        handle_assign(func, module, builder, stmt, map_sym_tab,
-                      local_sym_tab, structs_sym_tab)
+        handle_assign(
+            func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_sym_tab
+        )
     elif isinstance(stmt, ast.AugAssign):
         raise SyntaxError("Augmented assignment not supported")
     elif isinstance(stmt, ast.If):
-        handle_if(func, module, builder, stmt, map_sym_tab,
-                  local_sym_tab, structs_sym_tab)
+        handle_if(
+            func, module, builder, stmt, map_sym_tab, local_sym_tab, structs_sym_tab
+        )
     elif isinstance(stmt, ast.Return):
         if stmt.value is None:
             builder.ret(ir.Constant(ir.IntType(32), 0))
             did_return = True
-        elif isinstance(stmt.value, ast.Call) and isinstance(stmt.value.func, ast.Name) and len(stmt.value.args) == 1 and isinstance(stmt.value.args[0], ast.Constant) and isinstance(stmt.value.args[0].value, int):
+        elif (
+            isinstance(stmt.value, ast.Call)
+            and isinstance(stmt.value.func, ast.Name)
+            and len(stmt.value.args) == 1
+            and isinstance(stmt.value.args[0], ast.Constant)
+            and isinstance(stmt.value.args[0].value, int)
+        ):
             call_type = stmt.value.func.id
             if ctypes_to_ir(call_type) != ret_type:
-                raise ValueError("Return type mismatch: expected"
-                                 f"{ctypes_to_ir(call_type)}, got {call_type}")
+                raise ValueError(
+                    "Return type mismatch: expected"
+                    f"{ctypes_to_ir(call_type)}, got {call_type}"
+                )
             else:
-                builder.ret(ir.Constant(
-                    ret_type, stmt.value.args[0].value))
+                builder.ret(ir.Constant(ret_type, stmt.value.args[0].value))
                 did_return = True
         elif isinstance(stmt.value, ast.Name):
             if stmt.value.id == "XDP_PASS":
@@ -316,15 +405,33 @@ def process_stmt(func, module, builder, stmt, local_sym_tab, map_sym_tab, struct
     return did_return
 
 
-def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_tab, structs_sym_tab):
+def allocate_mem(
+    module, builder, body, func, ret_type, map_sym_tab, local_sym_tab, structs_sym_tab
+):
     for stmt in body:
         if isinstance(stmt, ast.If):
             if stmt.body:
                 local_sym_tab = allocate_mem(
-                    module, builder, stmt.body, func, ret_type, map_sym_tab, local_sym_tab, structs_sym_tab)
+                    module,
+                    builder,
+                    stmt.body,
+                    func,
+                    ret_type,
+                    map_sym_tab,
+                    local_sym_tab,
+                    structs_sym_tab,
+                )
             if stmt.orelse:
                 local_sym_tab = allocate_mem(
-                    module, builder, stmt.orelse, func, ret_type, map_sym_tab, local_sym_tab, structs_sym_tab)
+                    module,
+                    builder,
+                    stmt.orelse,
+                    func,
+                    ret_type,
+                    map_sym_tab,
+                    local_sym_tab,
+                    structs_sym_tab,
+                )
         elif isinstance(stmt, ast.Assign):
             if len(stmt.targets) != 1:
                 print("Unsupported multiassignment")
@@ -349,28 +456,27 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
                         ir_type = ir.IntType(64)
                         var = builder.alloca(ir_type, name=var_name)
                         var.align = ir_type.width // 8
-                        print(
-                            f"Pre-allocated variable {var_name} for helper")
+                        print(f"Pre-allocated variable {var_name} for helper")
                     elif call_type == "deref" and len(rval.args) == 1:
                         # Assume return type is int64 for now
                         ir_type = ir.IntType(64)
                         var = builder.alloca(ir_type, name=var_name)
                         var.align = ir_type.width // 8
-                        print(
-                            f"Pre-allocated variable {var_name} for deref")
+                        print(f"Pre-allocated variable {var_name} for deref")
                     elif call_type in structs_sym_tab:
                         struct_info = structs_sym_tab[call_type]
                         ir_type = struct_info.ir_type
                         var = builder.alloca(ir_type, name=var_name)
                         local_var_metadata[var_name] = call_type
                         print(
-                            f"Pre-allocated variable {var_name} for struct {call_type}")
+                            f"Pre-allocated variable {
+                                var_name} for struct {call_type}"
+                        )
                 elif isinstance(rval.func, ast.Attribute):
                     ir_type = ir.PointerType(ir.IntType(64))
                     var = builder.alloca(ir_type, name=var_name)
                     # var.align = ir_type.width // 8
-                    print(
-                        f"Pre-allocated variable {var_name} for map")
+                    print(f"Pre-allocated variable {var_name} for map")
                 else:
                     print("Unsupported assignment call function type")
                     continue
@@ -379,31 +485,27 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
                     ir_type = ir.IntType(1)
                     var = builder.alloca(ir_type, name=var_name)
                     var.align = 1
-                    print(
-                        f"Pre-allocated variable {var_name} of type c_bool")
+                    print(f"Pre-allocated variable {var_name} of type c_bool")
                 elif isinstance(rval.value, int):
                     # Assume c_int64 for now
                     ir_type = ir.IntType(64)
                     var = builder.alloca(ir_type, name=var_name)
                     var.align = ir_type.width // 8
-                    print(
-                        f"Pre-allocated variable {var_name} of type c_int64")
+                    print(f"Pre-allocated variable {var_name} of type c_int64")
                 elif isinstance(rval.value, str):
                     ir_type = ir.PointerType(ir.IntType(8))
                     var = builder.alloca(ir_type, name=var_name)
                     var.align = 8
-                    print(
-                        f"Pre-allocated variable {var_name} of type string")
+                    print(f"Pre-allocated variable {var_name} of type string")
                 else:
-                    print(f"Unsupported constant type")
+                    print("Unsupported constant type")
                     continue
             elif isinstance(rval, ast.BinOp):
                 # Assume c_int64 for now
                 ir_type = ir.IntType(64)
                 var = builder.alloca(ir_type, name=var_name)
                 var.align = ir_type.width // 8
-                print(
-                    f"Pre-allocated variable {var_name} of type c_int64")
+                print(f"Pre-allocated variable {var_name} of type c_int64")
             else:
                 print("Unsupported assignment value type")
                 continue
@@ -411,7 +513,9 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
     return local_sym_tab
 
 
-def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab, structs_sym_tab):
+def process_func_body(
+    module, builder, func_node, func, ret_type, map_sym_tab, structs_sym_tab
+):
     """Process the body of a bpf function"""
     # TODO: A lot.  We just have print -> bpf_trace_printk for now
     did_return = False
@@ -420,13 +524,30 @@ def process_func_body(module, builder, func_node, func, ret_type, map_sym_tab, s
 
     # pre-allocate dynamic variables
     local_sym_tab = allocate_mem(
-        module, builder, func_node.body, func, ret_type, map_sym_tab, local_sym_tab, structs_sym_tab)
+        module,
+        builder,
+        func_node.body,
+        func,
+        ret_type,
+        map_sym_tab,
+        local_sym_tab,
+        structs_sym_tab,
+    )
 
     print(f"Local symbol table: {local_sym_tab.keys()}")
 
     for stmt in func_node.body:
-        did_return = process_stmt(func, module, builder, stmt, local_sym_tab,
-                                  map_sym_tab, structs_sym_tab, did_return, ret_type)
+        did_return = process_stmt(
+            func,
+            module,
+            builder,
+            stmt,
+            local_sym_tab,
+            map_sym_tab,
+            structs_sym_tab,
+            did_return,
+            ret_type,
+        )
 
     if not did_return:
         builder.ret(ir.Constant(ir.IntType(32), 0))
@@ -465,8 +586,9 @@ def process_bpf_chunk(func_node, module, return_type, map_sym_tab, structs_sym_t
     block = func.append_basic_block(name="entry")
     builder = ir.IRBuilder(block)
 
-    process_func_body(module, builder, func_node, func,
-                      ret_type, map_sym_tab, structs_sym_tab)
+    process_func_body(
+        module, builder, func_node, func, ret_type, map_sym_tab, structs_sym_tab
+    )
     return func
 
 
@@ -474,7 +596,11 @@ def func_proc(tree, module, chunks, map_sym_tab, structs_sym_tab):
     for func_node in chunks:
         is_global = False
         for decorator in func_node.decorator_list:
-            if isinstance(decorator, ast.Name) and decorator.id in ("map", "bpfglobal", "struct"):
+            if isinstance(decorator, ast.Name) and decorator.id in (
+                "map",
+                "bpfglobal",
+                "struct",
+            ):
                 is_global = True
                 break
         if is_global:
@@ -482,8 +608,13 @@ def func_proc(tree, module, chunks, map_sym_tab, structs_sym_tab):
         func_type = get_probe_string(func_node)
         print(f"Found probe_string of {func_node.name}: {func_type}")
 
-        process_bpf_chunk(func_node, module, ctypes_to_ir(
-            infer_return_type(func_node)), map_sym_tab, structs_sym_tab)
+        process_bpf_chunk(
+            func_node,
+            module,
+            ctypes_to_ir(infer_return_type(func_node)),
+            map_sym_tab,
+            structs_sym_tab,
+        )
 
 
 def infer_return_type(func_node: ast.FunctionDef):
@@ -533,15 +664,17 @@ def infer_return_type(func_node: ast.FunctionDef):
             return ast.unparse(e)
         except Exception:
             return type(e).__name__
+
     for node in ast.walk(func_node):
         if isinstance(node, ast.Return):
             t = _expr_type(node.value)
             if found_type is None:
                 found_type = t
             elif found_type != t:
-                raise ValueError("Conflicting return types:"
-                                 f"{found_type} vs {t}")
+                raise ValueError("Conflicting return types:" f"{
+                                 found_type} vs {t}")
     return found_type or "None"
+
 
 # For string assignment to fixed-size arrays
 
@@ -551,7 +684,7 @@ def assign_string_to_array(builder, target_array_ptr, source_string_ptr, array_l
     Copy a string (i8*) to a fixed-size array ([N x i8]*)
     """
     # Create a loop to copy characters one by one
-    entry_block = builder.block
+    # entry_block = builder.block
     copy_block = builder.append_basic_block("copy_char")
     end_block = builder.append_basic_block("copy_end")
 
@@ -566,7 +699,8 @@ def assign_string_to_array(builder, target_array_ptr, source_string_ptr, array_l
     builder.position_at_end(copy_block)
     idx = builder.load(i)
     in_bounds = builder.icmp_unsigned(
-        '<', idx, ir.Constant(ir.IntType(32), array_length))
+        "<", idx, ir.Constant(ir.IntType(32), array_length)
+    )
     builder.cbranch(in_bounds, copy_block, end_block)
 
     with builder.if_then(in_bounds):

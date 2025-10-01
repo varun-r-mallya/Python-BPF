@@ -3,7 +3,7 @@ from llvmlite import ir
 
 
 def recursive_dereferencer(var, builder):
-    """ dereference until primitive type comes out"""
+    """dereference until primitive type comes out"""
     if var.type == ir.PointerType(ir.PointerType(ir.IntType(64))):
         a = builder.load(var)
         return recursive_dereferencer(a, builder)
@@ -46,37 +46,26 @@ def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab
     print(f"left is {left}, right is {right}, op is {op}")
 
     if isinstance(op, ast.Add):
-        builder.store(builder.add(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.add(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.Sub):
-        builder.store(builder.sub(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.sub(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.Mult):
-        builder.store(builder.mul(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.mul(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.Div):
-        builder.store(builder.sdiv(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.sdiv(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.Mod):
-        builder.store(builder.srem(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.srem(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.LShift):
-        builder.store(builder.shl(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.shl(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.RShift):
-        builder.store(builder.lshr(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.lshr(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.BitOr):
-        builder.store(builder.or_(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.or_(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.BitXor):
-        builder.store(builder.xor(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.xor(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.BitAnd):
-        builder.store(builder.and_(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.and_(left, right), local_sym_tab[var_name][0])
     elif isinstance(op, ast.FloorDiv):
-        builder.store(builder.udiv(left, right),
-                      local_sym_tab[var_name][0])
+        builder.store(builder.udiv(left, right), local_sym_tab[var_name][0])
     else:
         raise SyntaxError("Unsupported binary operation")

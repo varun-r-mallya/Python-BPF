@@ -10,6 +10,7 @@ from ctypes import c_void_p, c_int64, c_uint64
 # 3. Run the program with sudo: sudo tools/check.sh run examples/binops_demo.py
 # 4. Start up any program and watch the output
 
+
 @bpf
 @map
 def last() -> HashMap:
@@ -23,9 +24,9 @@ def do_trace(ctx: c_void_p) -> c_int64:
     tsp = last().lookup(key)
     if tsp:
         kt = ktime()
-        delta = (kt - tsp)
+        delta = kt - tsp
         if delta < 1000000000:
-            time_ms = (delta // 1000000)
+            time_ms = delta // 1000000
             print(f"Execve syscall entered within last second, last {time_ms} ms ago")
         last().delete(key)
     else:
@@ -33,15 +34,17 @@ def do_trace(ctx: c_void_p) -> c_int64:
         last().update(key, kt)
     return c_int64(0)
 
+
 @bpf
 @section("tracepoint/syscalls/sys_exit_execve")
 def do_exit(ctx: c_void_p) -> c_int64:
     va = 8
     nm = 5 ^ va
     al = 6 & 3
-    ru = (nm + al)
+    ru = nm + al
     print(f"this is a variable {ru}")
     return c_int64(0)
+
 
 @bpf
 @bpfglobal

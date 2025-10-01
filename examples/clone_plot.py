@@ -3,7 +3,7 @@ import time
 from pythonbpf import bpf, map, section, bpfglobal, BPF
 from pythonbpf.helpers import pid
 from pythonbpf.maps import HashMap
-from pylibbpf import *
+from pylibbpf import BpfMap
 from ctypes import c_void_p, c_int64, c_uint64, c_int32
 import matplotlib.pyplot as plt
 
@@ -14,10 +14,12 @@ import matplotlib.pyplot as plt
 # Everything is done with Python only code and with the new pylibbpf library.
 # Run `sudo /path/to/python/binary/ clone_plot.py`
 
+
 @bpf
 @map
 def hist() -> HashMap:
     return HashMap(key=c_int32, value=c_uint64, max_entries=4096)
+
 
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")

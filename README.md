@@ -1,6 +1,30 @@
-# Python-BPF
+<picture>
+  <source
+    media="(prefers-color-scheme: light)"
+    srcset="https://github.com/user-attachments/assets/f3738131-d7cb-4b5c-8699-c7010295a159"
+    width="450"
+    alt="Light‐mode image">
+  <img
+    src="https://github.com/user-attachments/assets/b175bf39-23cb-475d-a6e1-7b5c99a1ed72"
+    width="450"
+    alt="Dark‐mode image">
+</picture>
+<!-- Badges -->
+<p align="center">
+  <!-- PyPI -->
+  <a href="https://pypi.org/project/pythonbpf/"><img src="https://img.shields.io/pypi/v/pythonbpf?color=blue" alt="PyPI version"></a>
+  <!-- <a href="https://pypi.org/project/pythonbpf/"><img src="https://img.shields.io/pypi/pyversions/pythonbpf" alt="Python versions"></a> -->
+  <!-- <a href="https://pypi.org/project/pythonbpf/"><img src="https://img.shields.io/pypi/dm/pythonbpf" alt="PyPI downloads"></a> -->
+  <!-- <a href="https://pypi.org/project/pythonbpf/"><img src="https://img.shields.io/pypi/status/pythonbpf" alt="PyPI Status"></a> -->
+  <a href="https://pepy.tech/project/pythonbpf"><img src="https://pepy.tech/badge/pythonbpf" alt="Downloads"></a>
+  <!-- Build & CI -->
+  <a href="https://github.com/pythonbpf/python-bpf/actions"><img src="https://github.com/pythonbpf/python-bpf/actions/workflows/python-publish.yml/badge.svg" alt="Build Status"></a>
+  <!-- Meta -->
+  <a href="https://github.com/pythonbpf/python-bpf/blob/main/LICENSE"><img src="https://img.shields.io/github/license/pythonbpf/python-bpf" alt="License"></a>
+</p>
 
-Python-BPF is an LLVM IR generator for eBPF programs written in Python. It uses [llvmlite](https://github.com/numba/llvmlite) to generate LLVM IR and then compiles to LLVM object files. These object files can be loaded into the kernel for execution. Unlike BCC, Python-BPF performs compilation without relying on its infrastructure.
+
+Python-BPF is an LLVM IR generator for eBPF programs written in Python. It uses [llvmlite](https://github.com/numba/llvmlite) to generate LLVM IR and then compiles to LLVM object files. These object files can be loaded into the kernel for execution. Python-BPF performs compilation without relying on BCC.
 
 > **Note**: This project is under active development and not ready for production use.
 
@@ -145,23 +169,17 @@ This architecture eliminates the need for embedding C code in Python, allowing f
    ```bash
    make install
    ```
-
-3. Build and test examples:
-
-   ```bash
-   make
-   ```
-
-4. Verify an object file with the kernel verifier:
+   Then, run any example in `examples`
+3. Verify an object file with the kernel verifier:
 
    ```bash
-   ./check.sh check execve2.o
+   ./tools/check.sh check execve2.o
    ```
 
 5. Run an object file using `bpftool`:
 
    ```bash
-   ./check.sh run execve2.o
+   ./tools/check.sh run execve2.o
    ```
 
 6. Explore LLVM IR output from clang in `examples/c-form` by running `make`.

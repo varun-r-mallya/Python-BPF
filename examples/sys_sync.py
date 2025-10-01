@@ -24,9 +24,9 @@ def do_trace(ctx: c_void_p) -> c_int64:
     tsp = last().lookup(key)
     if tsp:
         kt = ktime()
-        delta = (kt - tsp)
+        delta = kt - tsp
         if delta < 1000000000:
-            time_ms = (delta // 1000000)
+            time_ms = delta // 1000000
             print(f"sync called within last second, last {time_ms} ms ago")
         last().delete(key)
     else:

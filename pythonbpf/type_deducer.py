@@ -17,7 +17,7 @@ def ctypes_to_ir(ctype: str):
         "c_double": ir.DoubleType(),
         "c_void_p": ir.IntType(64),
         # Not so sure about this one
-        "str": ir.PointerType(ir.IntType(8))
+        "str": ir.PointerType(ir.IntType(8)),
     }
     if ctype in mapping:
         return mapping[ctype]
