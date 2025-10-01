@@ -18,6 +18,11 @@ class LocalSymbol:
     ir_type: ir.Type
     metadata: Any = None
 
+    def __iter__(self):
+        yield self.var
+        yield self.ir_type
+        yield self.metadata
+
 
 def get_probe_string(func_node):
     """Extract the probe string from the decorator of the function node."""
@@ -669,8 +674,7 @@ def infer_return_type(func_node: ast.FunctionDef):
             if found_type is None:
                 found_type = t
             elif found_type != t:
-                raise ValueError(f"Conflicting return types:{
-                                 found_type} vs {t}")
+                raise ValueError(f"Conflicting return types:{found_type} vs {t}")
     return found_type or "None"
 
 
