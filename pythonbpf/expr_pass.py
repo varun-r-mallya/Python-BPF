@@ -10,10 +10,8 @@ def eval_expr(
     local_sym_tab,
     map_sym_tab,
     structs_sym_tab=None,
-    local_var_metadata=None,
 ):
     print(f"Evaluating expression: {ast.dump(expr)}")
-    print(local_var_metadata)
     if isinstance(expr, ast.Name):
         if expr.id in local_sym_tab:
             var = local_sym_tab[expr.id][0]
@@ -72,7 +70,6 @@ def eval_expr(
                     local_sym_tab,
                     map_sym_tab,
                     structs_sym_tab,
-                    local_var_metadata,
                 )
         elif isinstance(expr.func, ast.Attribute):
             print(f"Handling method call: {ast.dump(expr.func)}")
@@ -89,7 +86,6 @@ def eval_expr(
                         local_sym_tab,
                         map_sym_tab,
                         structs_sym_tab,
-                        local_var_metadata,
                     )
             elif isinstance(expr.func.value, ast.Name):
                 obj_name = expr.func.value.id
@@ -104,7 +100,6 @@ def eval_expr(
                             local_sym_tab,
                             map_sym_tab,
                             structs_sym_tab,
-                            local_var_metadata,
                         )
     elif isinstance(expr, ast.Attribute):
         if isinstance(expr.value, ast.Name):
@@ -114,14 +109,12 @@ def eval_expr(
                 var_ptr, var_type = local_sym_tab[var_name]
                 print(f"Loading attribute " f"{attr_name} from variable {var_name}")
                 print(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
-                print(local_var_metadata)
-                if local_var_metadata and var_name in local_var_metadata:
-                    metadata = structs_sym_tab[local_var_metadata[var_name]]
-                    if attr_name in metadata.fields:
-                        gep = metadata.gep(builder, var_ptr, attr_name)
-                        val = builder.load(gep)
-                        field_type = metadata.field_type(attr_name)
-                        return val, field_type
+                metadata = structs_sym_tab[local_sym_tab[var_name].metadata]
+                if attr_name in metadata.fields:
+                    gep = metadata.gep(builder, var_ptr, attr_name)
+                    val = builder.load(gep)
+                    field_type = metadata.field_type(attr_name)
+                    return val, field_type
     print("Unsupported expression evaluation")
     return None
 
@@ -134,11 +127,9 @@ def handle_expr(
     local_sym_tab,
     map_sym_tab,
     structs_sym_tab,
-    local_var_metadata,
 ):
     """Handle expression statements in the function body."""
     print(f"Handling expression: {ast.dump(expr)}")
-    print(local_var_metadata)
     call = expr.value
     if isinstance(call, ast.Call):
         eval_expr(
@@ -149,7 +140,6 @@ def handle_expr(
             local_sym_tab,
             map_sym_tab,
             structs_sym_tab,
-            local_var_metadata,
         )
     else:
         print("Unsupported expression type")
