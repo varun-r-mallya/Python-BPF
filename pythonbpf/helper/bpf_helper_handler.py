@@ -2,7 +2,7 @@ import ast
 from llvmlite import ir
 from pythonbpf.expr_pass import eval_expr
 from enum import Enum
-from .helper_utils import HelperHandlerRegistry, get_key_ptr
+from .helper_utils import HelperHandlerRegistry, get_or_create_ptr_from_arg
 
 
 class BPFHelperID(Enum):
@@ -41,7 +41,7 @@ def bpf_map_lookup_elem_emitter(call, map_ptr, module, builder, func,
     if not call.args or len(call.args) != 1:
         raise ValueError("Map lookup expects exactly one argument (key), got "
                          f"{len(call.args)}")
-    key_ptr = get_key_ptr(call.args[0], builder, local_sym_tab)
+    key_ptr = get_or_create_ptr_from_arg(call.args[0], builder, local_sym_tab)
     map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
 
     fn_type = ir.FunctionType(
@@ -242,25 +242,8 @@ def bpf_map_update_elem_emitter(call, map_ptr, module, builder, func,
     value_arg = call.args[1]
     flags_arg = call.args[2] if len(call.args) > 2 else None
 
-    key_ptr = get_key_ptr(key_arg, builder, local_sym_tab)
-    # Handle value
-    if isinstance(value_arg, ast.Name):
-        value_name = value_arg.id
-        if local_sym_tab and value_name in local_sym_tab:
-            value_ptr = local_sym_tab[value_name][0]
-        else:
-            raise ValueError(
-                f"Value variable {value_name} not found in local symbol table.")
-    elif isinstance(value_arg, ast.Constant) and isinstance(value_arg.value, int):
-        # Handle constant integers
-        value_val = value_arg.value
-        value_type = ir.IntType(64)
-        value_ptr = builder.alloca(value_type)
-        value_ptr.align = value_type.width // 8
-        builder.store(ir.Constant(value_type, value_val), value_ptr)
-    else:
-        raise NotImplementedError(
-            "Only simple variable names and integer constants are supported as values in map update.")
+    key_ptr = get_or_create_ptr_from_arg(key_arg, builder, local_sym_tab)
+    value_ptr = get_or_create_ptr_from_arg(value_arg, builder, local_sym_tab)
 
     # Handle flags argument (defaults to 0)
     if flags_arg is not None:
@@ -319,7 +302,7 @@ def bpf_map_delete_elem_emitter(call, map_ptr, module, builder, func,
     if not call.args or len(call.args) != 1:
         raise ValueError("Map delete expects exactly one argument (key), got "
                          f"{len(call.args)}")
-    key_ptr = get_key_ptr(call.args[0], builder, local_sym_tab)
+    key_ptr = get_or_create_ptr_from_arg(call.args[0], builder, local_sym_tab)
     map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
 
     # Define function type for bpf_map_delete_elem
