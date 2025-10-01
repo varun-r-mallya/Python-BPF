@@ -1,13 +1,13 @@
 from llvmlite import ir
 import ast
-
+from typing import Any
 
 from .helper import HelperHandlerRegistry, handle_helper_call
 from .type_deducer import ctypes_to_ir
 from .binary_ops import handle_binary_op
 from .expr_pass import eval_expr, handle_expr
 
-local_var_metadata = {}
+local_var_metadata: dict[str | Any, Any] = {}
 
 
 def get_probe_string(func_node):
@@ -656,9 +656,9 @@ def infer_return_type(func_node: ast.FunctionDef):
         except Exception:
             return type(e).__name__
 
-    for node in ast.walk(func_node):
-        if isinstance(node, ast.Return):
-            t = _expr_type(node.value)
+    for walked_node in ast.walk(func_node):
+        if isinstance(walked_node, ast.Return):
+            t = _expr_type(walked_node.value)
             if found_type is None:
                 found_type = t
             elif found_type != t:

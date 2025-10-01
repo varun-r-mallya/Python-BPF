@@ -141,7 +141,7 @@ def compile() -> bool:
     success = True
     success = compile_to_ir(str(caller_file), str(ll_file)) and success
 
-    success = (
+    success = bool(
         subprocess.run(
             [
                 "llc",

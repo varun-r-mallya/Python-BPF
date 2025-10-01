@@ -41,16 +41,15 @@ repos:
     - id: ruff
       args: ["--fix", "--show-fixes"]
     - id: ruff-format
-      exclude: ^(docs)
+      exclude: ^(docs)|^(tests)|^(examples)
 
-## Checking static types
-#- repo: https://github.com/pre-commit/mirrors-mypy
-#  rev: "v1.10.0"
-#  hooks:
-#    - id: mypy
-#      files: "setup.py"
-#      args: []
-#      additional_dependencies: [types-setuptools]
+# Checking static types
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: "v1.10.0"
+  hooks:
+    - id: mypy
+      exclude: ^(tests)|^(examples)
+      additional_dependencies: [types-setuptools]
 
 # Changes tabs to spaces
 - repo: https://github.com/Lucas-C/pre-commit-hooks
