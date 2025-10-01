@@ -21,6 +21,10 @@ class DebugInfoGenerator:
             )
         return self._type_cache[key]
 
+    def get_int32_type(self) -> Any:
+        """Get debug info for signed 32-bit integer"""
+        return self.get_basic_type("int", 32, dc.DW_ATE_signed)
+
     def get_uint32_type(self) -> Any:
         """Get debug info for unsigned 32-bit integer"""
         return self.get_basic_type("unsigned int", 32, dc.DW_ATE_unsigned)
