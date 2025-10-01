@@ -113,7 +113,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                 print(f"Assigned {call_type} constant "
                       f"{rval.args[0].value} to {var_name}")
                 # local_sym_tab[var_name] = var
-            elif call_type in HelperHandlerRegistry._handlers:
+            elif HelperHandlerRegistry.has_handler(call_type):
                 # var = builder.alloca(ir.IntType(64), name=var_name)
                 # var.align = 8
                 val = handle_helper_call(
@@ -154,7 +154,7 @@ def handle_assign(func, module, builder, stmt, map_sym_tab, local_sym_tab, struc
                 method_name = rval.func.attr
                 if map_name in map_sym_tab:
                     map_ptr = map_sym_tab[map_name]
-                    if method_name in HelperHandlerRegistry._handlers:
+                    if HelperHandlerRegistry.has_handler(method_name):
                         val = handle_helper_call(
                             rval, module, builder, func, local_sym_tab, map_sym_tab, structs_sym_tab, local_var_metadata)
                         # var = builder.alloca(ir.IntType(64), name=var_name)
@@ -344,7 +344,7 @@ def allocate_mem(module, builder, body, func, ret_type, map_sym_tab, local_sym_t
                         var.align = ir_type.width // 8
                         print(
                             f"Pre-allocated variable {var_name} of type {call_type}")
-                    elif call_type in HelperHandlerRegistry._handlers:
+                    elif HelperHandlerRegistry.has_handler(call_type):
                         # Assume return type is int64 for now
                         ir_type = ir.IntType(64)
                         var = builder.alloca(ir_type, name=var_name)

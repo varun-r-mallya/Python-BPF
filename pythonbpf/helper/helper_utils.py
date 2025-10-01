@@ -23,6 +23,11 @@ class HelperHandlerRegistry:
         """Get the handler function for a helper"""
         return cls._handlers.get(helper_name)
 
+    @classmethod
+    def has_handler(cls, helper_name):
+        """Check if a handler function is registered for a helper"""
+        return helper_name in cls._handlers
+
 
 def get_var_ptr_from_name(var_name, local_sym_tab):
     """Get a pointer to a variable from the symbol table."""
