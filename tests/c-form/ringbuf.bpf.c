@@ -22,14 +22,14 @@ struct {
 SEC("tracepoint/syscalls/sys_enter_execve")
 int trace_execve(void *ctx)
 {
-    struct event *e;
-    __u64 pid_tgid;
-    __u64 uid_gid;
-
+//    struct event *e;
+//    __u64 pid_tgid;
+//    __u64 uid_gid;
+    __u32 *e;
     // Reserve space in the ringbuffer
     e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
-//    if (!e)
-//        return 0;
+    if (!e)
+        return 0;
 //
 //    // Fill the struct with data
 //    pid_tgid = bpf_get_current_pid_tgid();
@@ -39,11 +39,13 @@ int trace_execve(void *ctx)
 //    e->uid = uid_gid & 0xFFFFFFFF;
 //
 //    e->timestamp = bpf_ktime_get_ns();
-//
+
 //    bpf_get_current_comm(&e->comm, sizeof(e->comm));
 //
 //    // Submit the event to ringbuffer
-//    bpf_ringbuf_submit(e, 0);
+    __u32 temp = 32;
+    e = &temp;
+    bpf_ringbuf_submit(e, 0);
 
     return 0;
 }
