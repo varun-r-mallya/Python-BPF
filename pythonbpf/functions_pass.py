@@ -449,7 +449,9 @@ def allocate_mem(
                         ir_type = ctypes_to_ir(call_type)
                         var = builder.alloca(ir_type, name=var_name)
                         var.align = ir_type.width // 8
-                        logger.info(f"Pre-allocated variable {var_name} of type {call_type}")
+                        logger.info(
+                            f"Pre-allocated variable {var_name} of type {call_type}"
+                        )
                     elif HelperHandlerRegistry.has_handler(call_type):
                         # Assume return type is int64 for now
                         ir_type = ir.IntType(64)

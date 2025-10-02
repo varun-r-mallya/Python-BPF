@@ -5,6 +5,7 @@ import logging
 
 logger: Logger = logging.getLogger(__name__)
 
+
 def eval_expr(
     func,
     module,

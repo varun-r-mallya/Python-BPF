@@ -50,8 +50,7 @@ def processor(source_code, filename, module):
 
 def compile_to_ir(filename: str, output: str, loglevel=logging.WARNING):
     logging.basicConfig(
-        level=loglevel,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        level=loglevel, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     )
     with open(filename) as f:
         source = f.read()
@@ -147,7 +146,9 @@ def compile(loglevel=logging.WARNING) -> bool:
     o_file = caller_file.with_suffix(".o")
 
     success = True
-    success = compile_to_ir(str(caller_file), str(ll_file), loglevel=loglevel) and success
+    success = (
+        compile_to_ir(str(caller_file), str(ll_file), loglevel=loglevel) and success
+    )
 
     success = bool(
         subprocess.run(

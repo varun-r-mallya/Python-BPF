@@ -5,6 +5,7 @@ import logging
 
 logger: Logger = logging.getLogger(__name__)
 
+
 def recursive_dereferencer(var, builder):
     """dereference until primitive type comes out"""
     if var.type == ir.PointerType(ir.PointerType(ir.IntType(64))):
