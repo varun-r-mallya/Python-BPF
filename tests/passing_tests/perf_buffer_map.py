@@ -1,7 +1,7 @@
 from pythonbpf import bpf, map, struct, section, bpfglobal, compile, compile_to_ir, BPF
 from pythonbpf.helper import ktime, pid
 from pythonbpf.maps import PerfEventArray
-
+import logging
 from ctypes import c_void_p, c_int32, c_uint64
 
 
@@ -42,8 +42,8 @@ def LICENSE() -> str:
     return "GPL"
 
 
-compile()
 compile_to_ir("perf_buffer_map.py", "perf_buffer_map.ll")
+compile(loglevel=logging.INFO)
 b = BPF()
 b.load_and_attach()
 

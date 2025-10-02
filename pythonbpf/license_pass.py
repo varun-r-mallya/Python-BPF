@@ -1,5 +1,9 @@
 from llvmlite import ir
 import ast
+from logging import Logger
+import logging
+
+logger: Logger = logging.getLogger(__name__)
 
 
 def emit_license(module: ir.Module, license_str: str):
@@ -41,9 +45,9 @@ def license_processing(tree, module):
                         emit_license(module, node.body[0].value.value)
                         return "LICENSE"
                     else:
-                        print("ERROR: LICENSE() must return a string literal")
+                        logger.info("ERROR: LICENSE() must return a string literal")
                         return None
                 else:
-                    print("ERROR: LICENSE already defined")
+                    logger.info("ERROR: LICENSE already defined")
                     return None
     return None
