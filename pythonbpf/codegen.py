@@ -5,15 +5,19 @@ from .functions_pass import func_proc
 from .maps import maps_proc
 from .structs import structs_proc
 from .globals_pass import globals_processing
-from .debuginfo import DW_LANG_C11, DwarfBehaviorEnum
+from .debuginfo import DW_LANG_C11, DwarfBehaviorEnum, DebugInfoGenerator
 import os
 import subprocess
 import inspect
 from pathlib import Path
 from pylibbpf import BpfProgram
 import tempfile
+from logging import Logger
+import logging
 
-VERSION = "v0.1.3"
+logger: Logger = logging.getLogger(__name__)
+
+VERSION = "v0.1.4"
 
 
 def find_bpf_chunks(tree):
@@ -30,11 +34,11 @@ def find_bpf_chunks(tree):
 
 def processor(source_code, filename, module):
     tree = ast.parse(source_code, filename)
-    print(ast.dump(tree, indent=4))
+    logger.debug(ast.dump(tree, indent=4))
 
     bpf_chunks = find_bpf_chunks(tree)
     for func_node in bpf_chunks:
-        print(f"Found BPF function/struct: {func_node.name}")
+        logger.info(f"Found BPF function/struct: {func_node.name}")
 
     structs_sym_tab = structs_proc(tree, module, bpf_chunks)
     map_sym_tab = maps_proc(tree, module, bpf_chunks)
@@ -44,7 +48,10 @@ def processor(source_code, filename, module):
     globals_processing(tree, module)
 
 
-def compile_to_ir(filename: str, output: str):
+def compile_to_ir(filename: str, output: str, loglevel=logging.WARNING):
+    logging.basicConfig(
+        level=loglevel, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
     with open(filename) as f:
         source = f.read()
 
@@ -53,32 +60,16 @@ def compile_to_ir(filename: str, output: str):
     module.triple = "bpf"
 
     if not hasattr(module, "_debug_compile_unit"):
-        module._file_metadata = module.add_debug_info(
-            "DIFile",
-            {  # type: ignore
-                "filename": filename,
-                "directory": os.path.dirname(filename),
-            },
+        debug_generator = DebugInfoGenerator(module)
+        debug_generator.generate_file_metadata(filename, os.path.dirname(filename))
+        debug_generator.generate_debug_cu(
+            DW_LANG_C11,
+            f"PythonBPF {VERSION}",
+            True,  # TODO: This is probably not true
+            # TODO: add a global field here that keeps track of all the globals. Works without it, but I think it might
+            # be required for kprobes.
+            True,
         )
-
-        module._debug_compile_unit = module.add_debug_info(
-            "DICompileUnit",
-            {  # type: ignore
-                "language": DW_LANG_C11,
-                "file": module._file_metadata,  # type: ignore
-                "producer": f"PythonBPF {VERSION}",
-                "isOptimized": True,  # TODO: This is probably not true
-                # TODO: add a global field here that keeps track of all the globals. Works without it, but I think it might
-                # be required for kprobes.
-                "runtimeVersion": 0,
-                "emissionKind": 1,
-                "splitDebugInlining": False,
-                "nameTableKind": 0,
-            },
-            is_distinct=True,
-        )
-
-        module.add_named_metadata("llvm.dbg.cu", module._debug_compile_unit)  # type: ignore
 
     processor(source, filename, module)
 
@@ -121,7 +112,7 @@ def compile_to_ir(filename: str, output: str):
 
     module.add_named_metadata("llvm.ident", [f"PythonBPF {VERSION}"])
 
-    print(f"IR written to {output}")
+    logger.info(f"IR written to {output}")
     with open(output, "w") as f:
         f.write(f'source_filename = "{filename}"\n')
         f.write(str(module))
@@ -130,7 +121,7 @@ def compile_to_ir(filename: str, output: str):
     return output
 
 
-def compile() -> bool:
+def compile(loglevel=logging.WARNING) -> bool:
     # Look one level up the stack to the caller of this function
     caller_frame = inspect.stack()[1]
     caller_file = Path(caller_frame.filename).resolve()
@@ -139,7 +130,9 @@ def compile() -> bool:
     o_file = caller_file.with_suffix(".o")
 
     success = True
-    success = compile_to_ir(str(caller_file), str(ll_file)) and success
+    success = (
+        compile_to_ir(str(caller_file), str(ll_file), loglevel=loglevel) and success
+    )
 
     success = bool(
         subprocess.run(
@@ -157,11 +150,11 @@ def compile() -> bool:
         and success
     )
 
-    print(f"Object written to {o_file}")
+    logger.info(f"Object written to {o_file}")
     return success
 
 
-def BPF() -> BpfProgram:
+def BPF(loglevel=logging.WARNING) -> BpfProgram:
     caller_frame = inspect.stack()[1]
     src = inspect.getsource(caller_frame.frame)
     with tempfile.NamedTemporaryFile(
@@ -174,7 +167,7 @@ def BPF() -> BpfProgram:
         f.write(src)
         f.flush()
         source = f.name
-        compile_to_ir(source, str(inter.name))
+        compile_to_ir(source, str(inter.name), loglevel=loglevel)
         subprocess.run(
             [
                 "llc",

@@ -19,7 +19,7 @@ def structs_proc(tree, module, chunks):
     structs_sym_tab = {}
     for cls_node in chunks:
         if is_bpf_struct(cls_node):
-            print(f"Found BPF struct: {cls_node.name}")
+            logger.info(f"Found BPF struct: {cls_node.name}")
             struct_info = process_bpf_struct(cls_node, module)
             structs_sym_tab[cls_node.name] = struct_info
     return structs_sym_tab

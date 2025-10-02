@@ -9,6 +9,10 @@ from .helper_utils import (
     simple_string_print,
     get_data_ptr_and_size,
 )
+from logging import Logger
+import logging
+
+logger: Logger = logging.getLogger(__name__)
 
 
 class BPFHelperID(Enum):
@@ -322,7 +326,7 @@ def handle_helper_call(
     elif isinstance(call.func, ast.Attribute):
         method_name = call.func.attr
         value = call.func.value
-        print(f"Handling method call: {ast.dump(call.func)}")
+        logger.info(f"Handling method call: {ast.dump(call.func)}")
         # Get map pointer from different styles of map access
         if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
             # Func style: my_map().lookup(key)
