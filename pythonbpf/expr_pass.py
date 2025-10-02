@@ -41,7 +41,8 @@ def _handle_attribute_expr(
         attr_name = expr.attr
         if var_name in local_sym_tab:
             var_ptr, var_type, var_metadata = local_sym_tab[var_name]
-            logger.info(f"Loading attribute {attr_name} from variable {var_name}")
+            logger.info(f"Loading attribute {
+                        attr_name} from variable {var_name}")
             logger.info(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
 
             metadata = structs_sym_tab[var_metadata]
@@ -51,6 +52,41 @@ def _handle_attribute_expr(
                 field_type = metadata.field_type(attr_name)
                 return val, field_type
     return None
+
+
+def _handle_deref_call(expr: ast.Call, local_sym_tab: Dict, builder: ir.IRBuilder):
+    """Handle deref function calls."""
+    logger.info(f"Handling deref {ast.dump(expr)}")
+    if len(expr.args) != 1:
+        logger.info("deref takes exactly one argument")
+        return None
+
+    arg = expr.args[0]
+    if (
+        isinstance(arg, ast.Call)
+        and isinstance(arg.func, ast.Name)
+        and arg.func.id == "deref"
+    ):
+        logger.info("Multiple deref not supported")
+        return None
+
+    if isinstance(arg, ast.Name):
+        if arg.id in local_sym_tab:
+            arg_ptr = local_sym_tab[arg.id].var
+        else:
+            logger.info(f"Undefined variable {arg.id}")
+            return None
+    else:
+        logger.info("Unsupported argument type for deref")
+        return None
+
+    if arg_ptr is None:
+        logger.info("Failed to evaluate deref argument")
+        return None
+
+    # Load the value from pointer
+    val = builder.load(arg_ptr)
+    return val, local_sym_tab[arg.id].ir_type
 
 
 def eval_expr(
@@ -68,48 +104,24 @@ def eval_expr(
     elif isinstance(expr, ast.Constant):
         return _handle_constant_expr(expr)
     elif isinstance(expr, ast.Call):
+        if isinstance(expr.func, ast.Name) and expr.func.id == "deref":
+            return _handle_deref_call(expr, local_sym_tab, builder)
+
         # delayed import to avoid circular dependency
         from pythonbpf.helper import HelperHandlerRegistry, handle_helper_call
 
-        if isinstance(expr.func, ast.Name):
-            # check deref
-            if expr.func.id == "deref":
-                logger.info(f"Handling deref {ast.dump(expr)}")
-                if len(expr.args) != 1:
-                    logger.info("deref takes exactly one argument")
-                    return None
-                arg = expr.args[0]
-                if (
-                    isinstance(arg, ast.Call)
-                    and isinstance(arg.func, ast.Name)
-                    and arg.func.id == "deref"
-                ):
-                    logger.info("Multiple deref not supported")
-                    return None
-                if isinstance(arg, ast.Name):
-                    if arg.id in local_sym_tab:
-                        arg = local_sym_tab[arg.id].var
-                    else:
-                        logger.info(f"Undefined variable {arg.id}")
-                        return None
-                if arg is None:
-                    logger.info("Failed to evaluate deref argument")
-                    return None
-                # Since we are handling only name case, directly take type from sym tab
-                val = builder.load(arg)
-                return val, local_sym_tab[expr.args[0].id].ir_type
-
-            # check for helpers
-            if HelperHandlerRegistry.has_handler(expr.func.id):
-                return handle_helper_call(
-                    expr,
-                    module,
-                    builder,
-                    func,
-                    local_sym_tab,
-                    map_sym_tab,
-                    structs_sym_tab,
-                )
+        if isinstance(expr.func, ast.Name) and HelperHandlerRegistry.has_handler(
+            expr.func.id
+        ):
+            return handle_helper_call(
+                expr,
+                module,
+                builder,
+                func,
+                local_sym_tab,
+                map_sym_tab,
+                structs_sym_tab,
+            )
         elif isinstance(expr.func, ast.Attribute):
             logger.info(f"Handling method call: {ast.dump(expr.func)}")
             if isinstance(expr.func.value, ast.Call) and isinstance(
