@@ -12,6 +12,10 @@ import inspect
 from pathlib import Path
 from pylibbpf import BpfProgram
 import tempfile
+from logging import Logger
+import logging
+
+logger: Logger = logging.getLogger(__name__)
 
 VERSION = "v0.1.3"
 
@@ -30,11 +34,11 @@ def find_bpf_chunks(tree):
 
 def processor(source_code, filename, module):
     tree = ast.parse(source_code, filename)
-    print(ast.dump(tree, indent=4))
+    logger.debug(ast.dump(tree, indent=4))
 
     bpf_chunks = find_bpf_chunks(tree)
     for func_node in bpf_chunks:
-        print(f"Found BPF function/struct: {func_node.name}")
+        logger.info(f"Found BPF function/struct: {func_node.name}")
 
     structs_sym_tab = structs_proc(tree, module, bpf_chunks)
     map_sym_tab = maps_proc(tree, module, bpf_chunks)
@@ -121,7 +125,7 @@ def compile_to_ir(filename: str, output: str):
 
     module.add_named_metadata("llvm.ident", [f"PythonBPF {VERSION}"])
 
-    print(f"IR written to {output}")
+    logger.info(f"IR written to {output}")
     with open(output, "w") as f:
         f.write(f'source_filename = "{filename}"\n')
         f.write(str(module))
@@ -157,7 +161,7 @@ def compile() -> bool:
         and success
     )
 
-    print(f"Object written to {o_file}")
+    logger.info(f"Object written to {o_file}")
     return success
 
 

@@ -1,6 +1,9 @@
 import ast
 from llvmlite import ir
+from logging import Logger
+import logging
 
+logger: Logger = logging.getLogger(__name__)
 
 def recursive_dereferencer(var, builder):
     """dereference until primitive type comes out"""
@@ -17,7 +20,7 @@ def recursive_dereferencer(var, builder):
 
 
 def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab, func):
-    print(module)
+    logger.info(f"module {module}")
     left = rval.left
     right = rval.right
     op = rval.op
@@ -43,7 +46,7 @@ def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab
     else:
         raise SyntaxError("Unsupported right operand type")
 
-    print(f"left is {left}, right is {right}, op is {op}")
+    logger.info(f"left is {left}, right is {right}, op is {op}")
 
     if isinstance(op, ast.Add):
         builder.store(builder.add(left, right), local_sym_tab[var_name].var)

@@ -1,6 +1,9 @@
 import ast
 from llvmlite import ir
+from logging import Logger
+import logging
 
+logger: Logger = logging.getLogger(__name__)
 
 def eval_expr(
     func,
@@ -11,14 +14,14 @@ def eval_expr(
     map_sym_tab,
     structs_sym_tab=None,
 ):
-    print(f"Evaluating expression: {ast.dump(expr)}")
+    logger.info(f"Evaluating expression: {ast.dump(expr)}")
     if isinstance(expr, ast.Name):
         if expr.id in local_sym_tab:
             var = local_sym_tab[expr.id].var
             val = builder.load(var)
             return val, local_sym_tab[expr.id].ir_type  # return value and type
         else:
-            print(f"Undefined variable {expr.id}")
+            logger.info(f"Undefined variable {expr.id}")
             return None
     elif isinstance(expr, ast.Constant):
         if isinstance(expr.value, int):
@@ -26,7 +29,7 @@ def eval_expr(
         elif isinstance(expr.value, bool):
             return ir.Constant(ir.IntType(1), int(expr.value)), ir.IntType(1)
         else:
-            print("Unsupported constant type")
+            logger.info("Unsupported constant type")
             return None
     elif isinstance(expr, ast.Call):
         # delayed import to avoid circular dependency
@@ -35,9 +38,9 @@ def eval_expr(
         if isinstance(expr.func, ast.Name):
             # check deref
             if expr.func.id == "deref":
-                print(f"Handling deref {ast.dump(expr)}")
+                logger.info(f"Handling deref {ast.dump(expr)}")
                 if len(expr.args) != 1:
-                    print("deref takes exactly one argument")
+                    logger.info("deref takes exactly one argument")
                     return None
                 arg = expr.args[0]
                 if (
@@ -45,16 +48,16 @@ def eval_expr(
                     and isinstance(arg.func, ast.Name)
                     and arg.func.id == "deref"
                 ):
-                    print("Multiple deref not supported")
+                    logger.info("Multiple deref not supported")
                     return None
                 if isinstance(arg, ast.Name):
                     if arg.id in local_sym_tab:
                         arg = local_sym_tab[arg.id].var
                     else:
-                        print(f"Undefined variable {arg.id}")
+                        logger.info(f"Undefined variable {arg.id}")
                         return None
                 if arg is None:
-                    print("Failed to evaluate deref argument")
+                    logger.info("Failed to evaluate deref argument")
                     return None
                 # Since we are handling only name case, directly take type from sym tab
                 val = builder.load(arg)
@@ -72,7 +75,7 @@ def eval_expr(
                     structs_sym_tab,
                 )
         elif isinstance(expr.func, ast.Attribute):
-            print(f"Handling method call: {ast.dump(expr.func)}")
+            logger.info(f"Handling method call: {ast.dump(expr.func)}")
             if isinstance(expr.func.value, ast.Call) and isinstance(
                 expr.func.value.func, ast.Name
             ):
@@ -107,15 +110,15 @@ def eval_expr(
             attr_name = expr.attr
             if var_name in local_sym_tab:
                 var_ptr, var_type, var_metadata = local_sym_tab[var_name]
-                print(f"Loading attribute {attr_name} from variable {var_name}")
-                print(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
+                logger.info(f"Loading attribute {attr_name} from variable {var_name}")
+                logger.info(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
                 metadata = structs_sym_tab[var_metadata]
                 if attr_name in metadata.fields:
                     gep = metadata.gep(builder, var_ptr, attr_name)
                     val = builder.load(gep)
                     field_type = metadata.field_type(attr_name)
                     return val, field_type
-    print("Unsupported expression evaluation")
+    logger.info("Unsupported expression evaluation")
     return None
 
 
@@ -129,7 +132,7 @@ def handle_expr(
     structs_sym_tab,
 ):
     """Handle expression statements in the function body."""
-    print(f"Handling expression: {ast.dump(expr)}")
+    logger.info(f"Handling expression: {ast.dump(expr)}")
     call = expr.value
     if isinstance(call, ast.Call):
         eval_expr(
@@ -142,4 +145,4 @@ def handle_expr(
             structs_sym_tab,
         )
     else:
-        print("Unsupported expression type")
+        logger.info("Unsupported expression type")
