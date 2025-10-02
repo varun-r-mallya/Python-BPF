@@ -12,6 +12,32 @@ class DebugInfoGenerator:
         self.module = module
         self._type_cache = {}  # Cache for common debug types
 
+    def generate_file_metadata(self, filename, dirname):
+        self.module._file_metadata = self.module.add_debug_info(
+            "DIFile",
+            {  # type: ignore
+                "filename": filename,
+                "directory": dirname,
+            },
+        )
+
+    def generate_debug_cu(self, language, producer: str, is_optimized: bool, is_distinct: bool):
+        self.module._debug_compile_unit = self.module.add_debug_info(
+            "DICompileUnit",
+            {  # type: ignore
+                "language": language,
+                "file": self.module._file_metadata,  # type: ignore
+                "producer": producer,
+                "isOptimized": is_optimized,
+                "runtimeVersion": 0,
+                "emissionKind": 1,
+                "splitDebugInlining": False,
+                "nameTableKind": 0,
+            },
+            is_distinct=is_distinct,
+        )
+        self.module.add_named_metadata("llvm.dbg.cu", self.module._debug_compile_unit)  # type: ignore
+
     def get_basic_type(self, name: str, size: int, encoding: int) -> Any:
         """Get or create a basic type with caching"""
         key = (name, size, encoding)
@@ -74,7 +100,7 @@ class DebugInfoGenerator:
         )
 
     def create_struct_type(
-        self, members: List[Any], size: int, is_distinct: bool
+            self, members: List[Any], size: int, is_distinct: bool
     ) -> Any:
         """Create a struct type with the given members and size"""
         return self.module.add_debug_info(
@@ -89,7 +115,7 @@ class DebugInfoGenerator:
         )
 
     def create_global_var_debug_info(
-        self, name: str, var_type: Any, is_local: bool = False
+            self, name: str, var_type: Any, is_local: bool = False
     ) -> Any:
         """Create debug info for a global variable"""
         global_var = self.module.add_debug_info(
