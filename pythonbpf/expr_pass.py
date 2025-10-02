@@ -29,13 +29,7 @@ def eval_expr(
 ):
     logger.info(f"Evaluating expression: {ast.dump(expr)}")
     if isinstance(expr, ast.Name):
-        if expr.id in local_sym_tab:
-            var = local_sym_tab[expr.id].var
-            val = builder.load(var)
-            return val, local_sym_tab[expr.id].ir_type  # return value and type
-        else:
-            logger.info(f"Undefined variable {expr.id}")
-            return None
+        return _handle_name_expr(expr, local_sym_tab, builder)
     elif isinstance(expr, ast.Constant):
         if isinstance(expr.value, int):
             return ir.Constant(ir.IntType(64), expr.value), ir.IntType(64)
@@ -123,8 +117,10 @@ def eval_expr(
             attr_name = expr.attr
             if var_name in local_sym_tab:
                 var_ptr, var_type, var_metadata = local_sym_tab[var_name]
-                logger.info(f"Loading attribute {attr_name} from variable {var_name}")
-                logger.info(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
+                logger.info(f"Loading attribute {
+                            attr_name} from variable {var_name}")
+                logger.info(f"Variable type: {
+                            var_type}, Variable ptr: {var_ptr}")
                 metadata = structs_sym_tab[var_metadata]
                 if attr_name in metadata.fields:
                     gep = metadata.gep(builder, var_ptr, attr_name)
