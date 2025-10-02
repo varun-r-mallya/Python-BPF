@@ -2,8 +2,20 @@ import ast
 from llvmlite import ir
 from logging import Logger
 import logging
+from typing import Dict
 
 logger: Logger = logging.getLogger(__name__)
+
+
+def _handle_name_expr(expr: ast.Name, local_sym_tab: Dict, builder: ir.IRBuilder):
+    """Handle ast.Name expressions."""
+    if expr.id in local_sym_tab:
+        var = local_sym_tab[expr.id].var
+        val = builder.load(var)
+        return val, local_sym_tab[expr.id].ir_type
+    else:
+        logger.info(f"Undefined variable {expr.id}")
+        return None
 
 
 def eval_expr(
