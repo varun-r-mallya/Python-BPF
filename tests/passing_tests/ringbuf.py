@@ -1,5 +1,5 @@
-from pythonbpf import bpf, BPF, map, bpfglobal, section, compile, compile_to_ir
-from pythonbpf.maps import RingBuf, HashMap
+from pythonbpf import bpf, map, bpfglobal, section, compile, compile_to_ir
+from pythonbpf.maps import RingBuf
 from ctypes import c_int32, c_void_p
 
 
@@ -9,17 +9,11 @@ from ctypes import c_int32, c_void_p
 def mymap() -> RingBuf:
     return RingBuf(max_entries=(1024))
 
-
-@bpf
-@map
-def mymap2() -> HashMap:
-    return HashMap(key=c_int32, value=c_int32, max_entries=1024)
-
-
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")
 def random_section(ctx: c_void_p) -> c_int32:
     print("Hello")
+    e = mymap().reserve(16)
     return c_int32(0)
 
 
@@ -31,5 +25,3 @@ def LICENSE() -> str:
 
 compile_to_ir("ringbuf.py", "ringbuf.ll")
 compile()
-b = BPF()
-b.load_and_attach()

@@ -28,22 +28,22 @@ int trace_execve(void *ctx)
 
     // Reserve space in the ringbuffer
     e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
-    if (!e)
-        return 0;
-
-    // Fill the struct with data
-    pid_tgid = bpf_get_current_pid_tgid();
-    e->pid = pid_tgid >> 32;
-
-    uid_gid = bpf_get_current_uid_gid();
-    e->uid = uid_gid & 0xFFFFFFFF;
-
-    e->timestamp = bpf_ktime_get_ns();
-
-    bpf_get_current_comm(&e->comm, sizeof(e->comm));
-
-    // Submit the event to ringbuffer
-    bpf_ringbuf_submit(e, 0);
+//    if (!e)
+//        return 0;
+//
+//    // Fill the struct with data
+//    pid_tgid = bpf_get_current_pid_tgid();
+//    e->pid = pid_tgid >> 32;
+//
+//    uid_gid = bpf_get_current_uid_gid();
+//    e->uid = uid_gid & 0xFFFFFFFF;
+//
+//    e->timestamp = bpf_ktime_get_ns();
+//
+//    bpf_get_current_comm(&e->comm, sizeof(e->comm));
+//
+//    // Submit the event to ringbuffer
+//    bpf_ringbuf_submit(e, 0);
 
     return 0;
 }
