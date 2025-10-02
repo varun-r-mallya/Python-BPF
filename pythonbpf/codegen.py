@@ -17,7 +17,7 @@ import logging
 
 logger: Logger = logging.getLogger(__name__)
 
-VERSION = "v0.1.3"
+VERSION = "v0.1.4"
 
 
 def find_bpf_chunks(tree):
