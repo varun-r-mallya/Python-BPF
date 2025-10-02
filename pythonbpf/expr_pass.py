@@ -29,6 +29,30 @@ def _handle_constant_expr(expr: ast.Constant):
         return None
 
 
+def _handle_attribute_expr(
+    expr: ast.Attribute,
+    local_sym_tab: Dict,
+    structs_sym_tab: Dict,
+    builder: ir.IRBuilder,
+):
+    """Handle ast.Attribute expressions for struct field access."""
+    if isinstance(expr.value, ast.Name):
+        var_name = expr.value.id
+        attr_name = expr.attr
+        if var_name in local_sym_tab:
+            var_ptr, var_type, var_metadata = local_sym_tab[var_name]
+            logger.info(f"Loading attribute {attr_name} from variable {var_name}")
+            logger.info(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
+
+            metadata = structs_sym_tab[var_metadata]
+            if attr_name in metadata.fields:
+                gep = metadata.gep(builder, var_ptr, attr_name)
+                val = builder.load(gep)
+                field_type = metadata.field_type(attr_name)
+                return val, field_type
+    return None
+
+
 def eval_expr(
     func,
     module,
@@ -117,19 +141,7 @@ def eval_expr(
                             structs_sym_tab,
                         )
     elif isinstance(expr, ast.Attribute):
-        if isinstance(expr.value, ast.Name):
-            var_name = expr.value.id
-            attr_name = expr.attr
-            if var_name in local_sym_tab:
-                var_ptr, var_type, var_metadata = local_sym_tab[var_name]
-                logger.info(f"Loading attribute {attr_name} from variable {var_name}")
-                logger.info(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
-                metadata = structs_sym_tab[var_metadata]
-                if attr_name in metadata.fields:
-                    gep = metadata.gep(builder, var_ptr, attr_name)
-                    val = builder.load(gep)
-                    field_type = metadata.field_type(attr_name)
-                    return val, field_type
+        return _handle_attribute_expr(expr, local_sym_tab, structs_sym_tab, builder)
     logger.info("Unsupported expression evaluation")
     return None
 
