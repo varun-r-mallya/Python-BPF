@@ -192,8 +192,23 @@ def handle_assign(
         elif isinstance(rval.func, ast.Attribute):
             logger.info(f"Assignment call attribute: {ast.dump(rval.func)}")
             if isinstance(rval.func.value, ast.Name):
-                # TODO: probably a struct access
-                logger.info(f"TODO STRUCT ACCESS {ast.dump(rval)}")
+                if rval.func.value.id in map_sym_tab:
+                    map_name = rval.func.value.id
+                    method_name = rval.func.attr
+                    if HelperHandlerRegistry.has_handler(method_name):
+                        val = handle_helper_call(
+                            rval,
+                            module,
+                            builder,
+                            func,
+                            local_sym_tab,
+                            map_sym_tab,
+                            structs_sym_tab,
+                        )
+                        builder.store(val[0], local_sym_tab[var_name].var)
+                else:
+                    # TODO: probably a struct access
+                    logger.info(f"TODO STRUCT ACCESS {ast.dump(rval)}")
             elif isinstance(rval.func.value, ast.Call) and isinstance(
                 rval.func.value.func, ast.Name
             ):
