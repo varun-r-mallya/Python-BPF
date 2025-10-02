@@ -274,6 +274,7 @@ def process_bpf_map(func_node, module):
     rval = return_stmt.value
 
     if isinstance(rval, ast.Call) and isinstance(rval.func, ast.Name):
+        print(f"we're lit, {ast.dump(rval)}")
         handler = MapProcessorRegistry.get_processor(rval.func.id)
         if handler:
             return handler(map_name, rval, module)
