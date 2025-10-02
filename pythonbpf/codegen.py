@@ -62,12 +62,14 @@ def compile_to_ir(filename: str, output: str, loglevel=logging.WARNING):
     if not hasattr(module, "_debug_compile_unit"):
         debug_generator = DebugInfoGenerator(module)
         debug_generator.generate_file_metadata(filename, os.path.dirname(filename))
-        debug_generator.generate_debug_cu(DW_LANG_C11,
-                                          f"PythonBPF {VERSION}",
-                                          True  # TODO: This is probably not true
-                                          # TODO: add a global field here that keeps track of all the globals. Works without it, but I think it might
-                                          # be required for kprobes.
-                                          , True)
+        debug_generator.generate_debug_cu(
+            DW_LANG_C11,
+            f"PythonBPF {VERSION}",
+            True,  # TODO: This is probably not true
+            # TODO: add a global field here that keeps track of all the globals. Works without it, but I think it might
+            # be required for kprobes.
+            True,
+        )
 
     processor(source, filename, module)
 
@@ -129,7 +131,7 @@ def compile(loglevel=logging.WARNING) -> bool:
 
     success = True
     success = (
-            compile_to_ir(str(caller_file), str(ll_file), loglevel=loglevel) and success
+        compile_to_ir(str(caller_file), str(ll_file), loglevel=loglevel) and success
     )
 
     success = bool(
@@ -156,7 +158,7 @@ def BPF(loglevel=logging.WARNING) -> BpfProgram:
     caller_frame = inspect.stack()[1]
     src = inspect.getsource(caller_frame.frame)
     with tempfile.NamedTemporaryFile(
-            mode="w+", delete=True, suffix=".py"
+        mode="w+", delete=True, suffix=".py"
     ) as f, tempfile.NamedTemporaryFile(
         mode="w+", delete=True, suffix=".ll"
     ) as inter, tempfile.NamedTemporaryFile(

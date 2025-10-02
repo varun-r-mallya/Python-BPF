@@ -21,7 +21,9 @@ class DebugInfoGenerator:
             },
         )
 
-    def generate_debug_cu(self, language, producer: str, is_optimized: bool, is_distinct: bool):
+    def generate_debug_cu(
+        self, language, producer: str, is_optimized: bool, is_distinct: bool
+    ):
         self.module._debug_compile_unit = self.module.add_debug_info(
             "DICompileUnit",
             {  # type: ignore
@@ -100,7 +102,7 @@ class DebugInfoGenerator:
         )
 
     def create_struct_type(
-            self, members: List[Any], size: int, is_distinct: bool
+        self, members: List[Any], size: int, is_distinct: bool
     ) -> Any:
         """Create a struct type with the given members and size"""
         return self.module.add_debug_info(
@@ -115,7 +117,7 @@ class DebugInfoGenerator:
         )
 
     def create_global_var_debug_info(
-            self, name: str, var_type: Any, is_local: bool = False
+        self, name: str, var_type: Any, is_local: bool = False
     ) -> Any:
         """Create debug info for a global variable"""
         global_var = self.module.add_debug_info(
