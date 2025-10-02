@@ -48,7 +48,11 @@ def processor(source_code, filename, module):
     globals_processing(tree, module)
 
 
-def compile_to_ir(filename: str, output: str):
+def compile_to_ir(filename: str, output: str, loglevel=logging.WARNING):
+    logging.basicConfig(
+        level=loglevel,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
     with open(filename) as f:
         source = f.read()
 
@@ -134,7 +138,7 @@ def compile_to_ir(filename: str, output: str):
     return output
 
 
-def compile() -> bool:
+def compile(loglevel=logging.WARNING) -> bool:
     # Look one level up the stack to the caller of this function
     caller_frame = inspect.stack()[1]
     caller_file = Path(caller_frame.filename).resolve()
@@ -143,7 +147,7 @@ def compile() -> bool:
     o_file = caller_file.with_suffix(".o")
 
     success = True
-    success = compile_to_ir(str(caller_file), str(ll_file)) and success
+    success = compile_to_ir(str(caller_file), str(ll_file), loglevel=loglevel) and success
 
     success = bool(
         subprocess.run(
@@ -165,7 +169,7 @@ def compile() -> bool:
     return success
 
 
-def BPF() -> BpfProgram:
+def BPF(loglevel=logging.WARNING) -> BpfProgram:
     caller_frame = inspect.stack()[1]
     src = inspect.getsource(caller_frame.frame)
     with tempfile.NamedTemporaryFile(
@@ -178,7 +182,7 @@ def BPF() -> BpfProgram:
         f.write(src)
         f.flush()
         source = f.name
-        compile_to_ir(source, str(inter.name))
+        compile_to_ir(source, str(inter.name), loglevel=loglevel)
         subprocess.run(
             [
                 "llc",
