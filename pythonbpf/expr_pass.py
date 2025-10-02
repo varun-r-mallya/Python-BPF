@@ -18,6 +18,17 @@ def _handle_name_expr(expr: ast.Name, local_sym_tab: Dict, builder: ir.IRBuilder
         return None
 
 
+def _handle_constant_expr(expr: ast.Constant):
+    """Handle ast.Constant expressions."""
+    if isinstance(expr.value, int):
+        return ir.Constant(ir.IntType(64), expr.value), ir.IntType(64)
+    elif isinstance(expr.value, bool):
+        return ir.Constant(ir.IntType(1), int(expr.value)), ir.IntType(1)
+    else:
+        logger.info("Unsupported constant type")
+        return None
+
+
 def eval_expr(
     func,
     module,
@@ -31,13 +42,7 @@ def eval_expr(
     if isinstance(expr, ast.Name):
         return _handle_name_expr(expr, local_sym_tab, builder)
     elif isinstance(expr, ast.Constant):
-        if isinstance(expr.value, int):
-            return ir.Constant(ir.IntType(64), expr.value), ir.IntType(64)
-        elif isinstance(expr.value, bool):
-            return ir.Constant(ir.IntType(1), int(expr.value)), ir.IntType(1)
-        else:
-            logger.info("Unsupported constant type")
-            return None
+        return _handle_constant_expr(expr)
     elif isinstance(expr, ast.Call):
         # delayed import to avoid circular dependency
         from pythonbpf.helper import HelperHandlerRegistry, handle_helper_call
@@ -117,10 +122,8 @@ def eval_expr(
             attr_name = expr.attr
             if var_name in local_sym_tab:
                 var_ptr, var_type, var_metadata = local_sym_tab[var_name]
-                logger.info(f"Loading attribute {
-                            attr_name} from variable {var_name}")
-                logger.info(f"Variable type: {
-                            var_type}, Variable ptr: {var_ptr}")
+                logger.info(f"Loading attribute {attr_name} from variable {var_name}")
+                logger.info(f"Variable type: {var_type}, Variable ptr: {var_ptr}")
                 metadata = structs_sym_tab[var_metadata]
                 if attr_name in metadata.fields:
                     gep = metadata.gep(builder, var_ptr, attr_name)
