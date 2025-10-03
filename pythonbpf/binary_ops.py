@@ -63,4 +63,6 @@ def handle_binary_op_impl(rval, module, builder, local_sym_tab):
 
 def handle_binary_op(rval, module, builder, var_name, local_sym_tab):
     result = handle_binary_op_impl(rval, module, builder, local_sym_tab)
-    builder.store(result, local_sym_tab[var_name].var)
+    if var_name in local_sym_tab:
+        builder.store(result, local_sym_tab[var_name].var)
+    return result, result.type
