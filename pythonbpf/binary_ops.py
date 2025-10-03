@@ -8,10 +8,7 @@ logger: Logger = logging.getLogger(__name__)
 
 def recursive_dereferencer(var, builder):
     """dereference until primitive type comes out"""
-    if var.type == ir.PointerType(ir.PointerType(ir.IntType(64))):
-        a = builder.load(var)
-        return recursive_dereferencer(a, builder)
-    elif var.type == ir.PointerType(ir.IntType(64)):
+    if isinstance(var.type, ir.PointerType):
         a = builder.load(var)
         return recursive_dereferencer(a, builder)
     elif var.type == ir.IntType(64):
