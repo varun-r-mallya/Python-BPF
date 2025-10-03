@@ -417,6 +417,19 @@ def process_stmt(
                     )
                 builder.ret(val[0])
                 did_return = True
+            elif isinstance(stmt.value.args[0], ast.Name):
+                if stmt.value.args[0].id in local_sym_tab:
+                    var = local_sym_tab[stmt.value.args[0].id].var
+                    val = builder.load(var)
+                    if val.type != ret_type:
+                        raise ValueError(
+                            "Return type mismatch: expected"
+                            f"{ret_type}, got {val.type}"
+                        )
+                    builder.ret(val)
+                    did_return = True
+                else:
+                    raise ValueError("Failed to evaluate return expression")
         elif isinstance(stmt.value, ast.Name):
             if stmt.value.id == "XDP_PASS":
                 builder.ret(ir.Constant(ret_type, 2))
