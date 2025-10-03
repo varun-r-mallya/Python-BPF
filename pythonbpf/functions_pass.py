@@ -385,7 +385,7 @@ def process_stmt(
         )
     elif isinstance(stmt, ast.Return):
         if stmt.value is None:
-            builder.ret(ir.Constant(ir.IntType(32), 0))
+            builder.ret(ir.Constant(ir.IntType(64), 0))
             did_return = True
         elif (
             isinstance(stmt.value, ast.Call)
@@ -582,7 +582,7 @@ def process_func_body(
         )
 
     if not did_return:
-        builder.ret(ir.Constant(ir.IntType(32), 0))
+        builder.ret(ir.Constant(ir.IntType(64), 0))
 
 
 def process_bpf_chunk(func_node, module, return_type, map_sym_tab, structs_sym_tab):
