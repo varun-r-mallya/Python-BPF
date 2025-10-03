@@ -233,7 +233,7 @@ def handle_assign(
         else:
             logger.info("Unsupported assignment call function type")
     elif isinstance(rval, ast.BinOp):
-        handle_binary_op(rval, module, builder, var_name, local_sym_tab)
+        handle_binary_op(rval, builder, var_name, local_sym_tab)
     else:
         logger.info("Unsupported assignment value type")
 
@@ -406,9 +406,7 @@ def process_stmt(
                     did_return = True
             elif isinstance(stmt.value.args[0], ast.BinOp):
                 # TODO: Should be routed through eval_expr
-                val = handle_binary_op(
-                    stmt.value.args[0], module, builder, None, local_sym_tab
-                )
+                val = handle_binary_op(stmt.value.args[0], builder, None, local_sym_tab)
                 if val is None:
                     raise ValueError("Failed to evaluate return expression")
                 if val[1] != ret_type:
