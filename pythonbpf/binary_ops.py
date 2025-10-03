@@ -32,34 +32,28 @@ def get_operand_value(operand, builder, local_sym_tab):
 
 
 def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab, func):
-    logger.info(f"module {module}")
     op = rval.op
-
     left = get_operand_value(rval.left, builder, local_sym_tab)
     right = get_operand_value(rval.right, builder, local_sym_tab)
     logger.info(f"left is {left}, right is {right}, op is {op}")
 
-    if isinstance(op, ast.Add):
-        builder.store(builder.add(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.Sub):
-        builder.store(builder.sub(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.Mult):
-        builder.store(builder.mul(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.Div):
-        builder.store(builder.sdiv(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.Mod):
-        builder.store(builder.srem(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.LShift):
-        builder.store(builder.shl(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.RShift):
-        builder.store(builder.lshr(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.BitOr):
-        builder.store(builder.or_(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.BitXor):
-        builder.store(builder.xor(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.BitAnd):
-        builder.store(builder.and_(left, right), local_sym_tab[var_name].var)
-    elif isinstance(op, ast.FloorDiv):
-        builder.store(builder.udiv(left, right), local_sym_tab[var_name].var)
+    # Map AST operation nodes to LLVM IR builder methods
+    op_map = {
+        ast.Add: builder.add,
+        ast.Sub: builder.sub,
+        ast.Mult: builder.mul,
+        ast.Div: builder.sdiv,
+        ast.Mod: builder.srem,
+        ast.LShift: builder.shl,
+        ast.RShift: builder.lshr,
+        ast.BitOr: builder.or_,
+        ast.BitXor: builder.xor,
+        ast.BitAnd: builder.and_,
+        ast.FloorDiv: builder.udiv,
+    }
+
+    if type(op) in op_map:
+        result = op_map[type(op)](left, right)
+        builder.store(result, local_sym_tab[var_name].var)
     else:
         raise SyntaxError("Unsupported binary operation")
