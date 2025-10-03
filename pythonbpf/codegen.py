@@ -121,7 +121,7 @@ def compile_to_ir(filename: str, output: str, loglevel=logging.WARNING):
     return output
 
 
-def compile(loglevel=logging.INFO) -> bool:
+def compile(loglevel=logging.WARNING) -> bool:
     # Look one level up the stack to the caller of this function
     caller_frame = inspect.stack()[1]
     caller_file = Path(caller_frame.filename).resolve()
