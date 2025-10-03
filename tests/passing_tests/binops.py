@@ -3,9 +3,9 @@ from ctypes import c_void_p, c_int64
 
 
 @bpf
-@section("sometag1")
+@section("tracepoint/syscalls/sys_enter_sync")
 def sometag(ctx: c_void_p) -> c_int64:
-    a = 1 + 2 + 1
+    a = 1 + 2 + 1 + 12 + 13
     print(f"{a}")
     return c_int64(0)
 

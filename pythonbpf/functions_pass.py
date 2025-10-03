@@ -233,9 +233,7 @@ def handle_assign(
         else:
             logger.info("Unsupported assignment call function type")
     elif isinstance(rval, ast.BinOp):
-        handle_binary_op(
-            rval, module, builder, var_name, local_sym_tab, map_sym_tab, func
-        )
+        handle_binary_op(rval, module, builder, var_name, local_sym_tab)
     else:
         logger.info("Unsupported assignment value type")
 
