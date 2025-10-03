@@ -26,12 +26,12 @@ def count() -> HashMap:
 @bpf
 @section("xdp")
 def hello_world(ctx: c_void_p) -> c_int64:
-    prev = count().lookup(0)
+    prev = count.lookup(0)
     if prev:
-        count().update(0, prev + 1)
+        count.update(0, prev + 1)
         return XDP_PASS
     else:
-        count().update(0, 1)
+        count.update(0, 1)
 
     return XDP_PASS
 
