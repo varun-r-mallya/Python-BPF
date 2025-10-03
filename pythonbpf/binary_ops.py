@@ -18,7 +18,7 @@ def recursive_dereferencer(var, builder):
         raise TypeError(f"Unsupported type for dereferencing: {var.type}")
 
 
-def get_operand_value(operand, builder, local_sym_tab):
+def get_operand_value(operand, module, builder, local_sym_tab):
     """Extract the value from an operand, handling variables and constants."""
     if isinstance(operand, ast.Name):
         if operand.id in local_sym_tab:
@@ -28,13 +28,15 @@ def get_operand_value(operand, builder, local_sym_tab):
         if isinstance(operand.value, int):
             return ir.Constant(ir.IntType(64), operand.value)
         raise TypeError(f"Unsupported constant type: {type(operand.value)}")
+    elif isinstance(operand, ast.BinOp):
+        return handle_binary_op_impl(operand, module, builder, local_sym_tab)
     raise TypeError(f"Unsupported operand type: {type(operand)}")
 
 
-def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab, func):
+def handle_binary_op_impl(rval, module, builder, local_sym_tab):
     op = rval.op
-    left = get_operand_value(rval.left, builder, local_sym_tab)
-    right = get_operand_value(rval.right, builder, local_sym_tab)
+    left = get_operand_value(rval.left, module, builder, local_sym_tab)
+    right = get_operand_value(rval.right, module, builder, local_sym_tab)
     logger.info(f"left is {left}, right is {right}, op is {op}")
 
     # Map AST operation nodes to LLVM IR builder methods
@@ -54,6 +56,11 @@ def handle_binary_op(rval, module, builder, var_name, local_sym_tab, map_sym_tab
 
     if type(op) in op_map:
         result = op_map[type(op)](left, right)
-        builder.store(result, local_sym_tab[var_name].var)
+        return result
     else:
         raise SyntaxError("Unsupported binary operation")
+
+
+def handle_binary_op(rval, module, builder, var_name, local_sym_tab):
+    result = handle_binary_op_impl(rval, module, builder, local_sym_tab)
+    builder.store(result, local_sym_tab[var_name].var)
