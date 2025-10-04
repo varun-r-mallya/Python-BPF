@@ -62,7 +62,7 @@ def bpf_map_lookup_elem_emitter(
     """
     if not call.args or len(call.args) != 1:
         raise ValueError(
-            "Map lookup expects exactly one argument (key), got " f"{len(call.args)}"
+            f"Map lookup expects exactly one argument (key), got {len(call.args)}"
         )
     key_ptr = get_or_create_ptr_from_arg(call.args[0], builder, local_sym_tab)
     map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
@@ -145,8 +145,7 @@ def bpf_map_update_elem_emitter(
     """
     if not call.args or len(call.args) < 2 or len(call.args) > 3:
         raise ValueError(
-            "Map update expects 2 or 3 args (key, value, flags), "
-            f"got {len(call.args)}"
+            f"Map update expects 2 or 3 args (key, value, flags), got {len(call.args)}"
         )
 
     key_arg = call.args[0]
@@ -196,7 +195,7 @@ def bpf_map_delete_elem_emitter(
     """
     if not call.args or len(call.args) != 1:
         raise ValueError(
-            "Map delete expects exactly one argument (key), got " f"{len(call.args)}"
+            f"Map delete expects exactly one argument (key), got {len(call.args)}"
         )
     key_ptr = get_or_create_ptr_from_arg(call.args[0], builder, local_sym_tab)
     map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
@@ -255,7 +254,7 @@ def bpf_perf_event_output_handler(
 ):
     if len(call.args) != 1:
         raise ValueError(
-            "Perf event output expects exactly one argument, " f"got {len(call.args)}"
+            f"Perf event output expects exactly one argument, got {len(call.args)}"
         )
     data_arg = call.args[0]
     ctx_ptr = func.args[0]  # First argument to the function is ctx

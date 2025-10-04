@@ -146,8 +146,7 @@ def handle_assign(
                     local_sym_tab[var_name].var,
                 )
                 logger.info(
-                    f"Assigned {call_type} constant "
-                    f"{rval.args[0].value} to {var_name}"
+                    f"Assigned {call_type} constant {rval.args[0].value} to {var_name}"
                 )
             elif HelperHandlerRegistry.has_handler(call_type):
                 # var = builder.alloca(ir.IntType(64), name=var_name)
@@ -483,8 +482,7 @@ def allocate_mem(
                         var = builder.alloca(ir_type, name=var_name)
                         has_metadata = True
                         logger.info(
-                            f"Pre-allocated variable {var_name} "
-                            f"for struct {call_type}"
+                            f"Pre-allocated variable {var_name} for struct {call_type}"
                         )
                 elif isinstance(rval.func, ast.Attribute):
                     ir_type = ir.PointerType(ir.IntType(64))

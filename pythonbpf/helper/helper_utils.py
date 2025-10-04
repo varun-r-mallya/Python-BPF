@@ -270,7 +270,7 @@ def _prepare_expr_args(expr, func, module, builder, local_sym_tab, struct_sym_ta
                 val = builder.sext(val, ir.IntType(64))
         else:
             logger.warning(
-                "Only int and ptr supported in bpf_printk args. " "Others default to 0."
+                "Only int and ptr supported in bpf_printk args. Others default to 0."
             )
             val = ir.Constant(ir.IntType(64), 0)
         return val
