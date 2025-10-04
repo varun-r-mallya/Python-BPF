@@ -12,10 +12,10 @@ def mymap() -> RingBuf:
 @bpf
 @section("tracepoint/syscalls/sys_enter_clone")
 def random_section(ctx: c_void_p) -> c_int32:
-    print("Hello")
-    e = mymap().reserve(6)
-    if e:
-        mymap().submit(e)
+    e: c_int32 = mymap().reserve(64)
+    if e == 0:  # here is the issue i think
+        return c_int32(0)
+    mymap().submit(e)
     return c_int32(0)
 
 

@@ -23,6 +23,8 @@ class BPFHelperID(Enum):
     BPF_PRINTK = 6
     BPF_GET_CURRENT_PID_TGID = 14
     BPF_PERF_EVENT_OUTPUT = 25
+    BPF_RINGBUF_RESERVE = 131
+    BPF_RINGBUF_SUBMIT = 132
 
 
 @HelperHandlerRegistry.register("ktime")
@@ -178,6 +180,114 @@ def bpf_map_update_elem_emitter(
     )
 
     return result, None
+
+@HelperHandlerRegistry.register("submit")
+def bpf_ringbuf_submit_emitter(
+    call,
+    map_ptr,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
+    """
+    Emit LLVM IR for bpf_ringbuf_submit helper function call.
+    Expected call signature: ringbuf.submit(data, flags=0)
+    """
+    if not call.args or len(call.args) < 1 or len(call.args) > 2:
+        raise ValueError(
+            "Ringbuf submit expects 1 or 2 args (data, flags), "
+            f"got {len(call.args)}"
+        )
+
+    data_arg = call.args[0]
+    data_ptr = get_or_create_ptr_from_arg(data_arg, builder, local_sym_tab)
+
+    # Get flags argument (default to 0)
+    flags_arg = call.args[1] if len(call.args) > 1 else None
+    flags_val = get_flags_val(flags_arg, builder, local_sym_tab)
+
+    # Returns: void
+    # Args: (void* data, u64 flags)
+    fn_type = ir.FunctionType(
+        ir.VoidType(),
+        [ir.PointerType(), ir.IntType(64)],
+        var_arg=False,
+    )
+    fn_ptr_type = ir.PointerType(fn_type)
+
+    fn_addr = ir.Constant(ir.IntType(64), BPFHelperID.BPF_RINGBUF_SUBMIT.value)
+    fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
+
+    if isinstance(flags_val, int):
+        flags_const = ir.Constant(ir.IntType(64), flags_val)
+    else:
+        flags_const = flags_val
+
+    builder.call(fn_ptr, [data_ptr, flags_const], tail=True)
+
+    return None
+
+@HelperHandlerRegistry.register("reserve")
+def bpf_ringbuf_reserve_emitter(
+    call,
+    map_ptr,
+    module,
+    builder,
+    func,
+    local_sym_tab=None,
+    struct_sym_tab=None,
+    local_var_metadata=None,
+):
+    """
+    Emit LLVM IR for bpf_ringbuf_reserve helper function call.
+    Expected call signature: ringbuf.reserve(size, flags=0)
+    """
+    if not call.args or len(call.args) < 1 or len(call.args) > 2:
+        raise ValueError(
+            "Ringbuf reserve expects 1 or 2 args (size, flags), "
+            f"got {len(call.args)}"
+        )
+
+    # TODO: here, getting length of stuff does not actually work. need to fix this.
+    size_arg = call.args[0]
+    if isinstance(size_arg, ast.Constant):
+        size_val = ir.Constant(ir.IntType(64), size_arg.value)
+    elif isinstance(size_arg, ast.Name):
+        if size_arg.id not in local_sym_tab:
+            raise ValueError(
+                f"Variable '{size_arg.id}' not found in local symbol table"
+            )
+        size_val = builder.load(local_sym_tab[size_arg.id])
+    else:
+        raise NotImplementedError(f"Unsupported size argument type: {type(size_arg)}")
+
+    flags_arg = call.args[1] if len(call.args) > 1 else None
+    flags_val = get_flags_val(flags_arg, builder, local_sym_tab)
+
+    map_void_ptr = builder.bitcast(map_ptr, ir.PointerType())
+
+    # Args: (void* ringbuf, u64 size, u64 flags)
+    fn_type = ir.FunctionType(
+        ir.PointerType(),
+        [ir.PointerType(), ir.IntType(64), ir.IntType(64)],
+        var_arg=False,
+    )
+    fn_ptr_type = ir.PointerType(fn_type)
+
+    fn_addr = ir.Constant(ir.IntType(64), BPFHelperID.BPF_RINGBUF_RESERVE.value)
+    fn_ptr = builder.inttoptr(fn_addr, fn_ptr_type)
+
+    if isinstance(flags_val, int):
+        flags_const = ir.Constant(ir.IntType(64), flags_val)
+    else:
+        flags_const = flags_val
+
+    result = builder.call(fn_ptr, [map_void_ptr, size_val, flags_const], tail=True)
+
+    return result, ir.PointerType()
 
 
 @HelperHandlerRegistry.register("delete")
